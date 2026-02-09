@@ -1,6 +1,6 @@
-# ⚡ ShipFree
+# MarketiStats
 
-A free, open-source SaaS boilerplate to ship your product fast. Built with Next.js, Supabase, Stripe, and everything you need to launch.
+Full-stack SaaS application with Next.js frontend and Spring Boot backend.
 
 ## What's Included
 
