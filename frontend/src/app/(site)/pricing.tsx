@@ -5,93 +5,99 @@ export default function PricingSection() {
   return (
     <div
       id="pricing"
-      className="min-h-screen bg-[#0F0F0F] text-white px-4 py-16"
+      className="min-h-screen bg-white py-24 px-4"
     >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-[#FFBE18] font-medium mb-4">Pricing</p>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Open Source & Free Forever
+        <div className="text-center mb-20">
+          <p className="text-purple-700 font-bold mb-4 uppercase tracking-wider text-sm">Pricing</p>
+          <h2 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6">
+            Simple, Transparent Pricing
           </h2>
-          <p className="text-green-500 flex items-center justify-center gap-2 text-lg">
+          <p className="text-purple-700 flex items-center justify-center gap-2 text-xl font-bold">
             <span className="inline-block">🎉</span>
-            MIT License - Use it for anything
+            Start free, upgrade when you need more
           </p>
         </div>
 
-        <div className="max-w-md mx-auto">
-          <div className="rounded-xl bg-zinc-900 p-6 border border-green-500/50 relative">
-            <div className="absolute -top-3 right-6 bg-green-500 text-black text-sm font-semibold px-3 py-1 rounded-full">
-              FREE
-            </div>
-            <h3 className="text-xl font-semibold mb-4">Full Stack Boilerplate</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Free Plan */}
+          <div className="rounded-2xl bg-white p-8 border-2 border-gray-300 hover:border-purple-400 hover:shadow-xl transition-all">
             <div className="mb-6">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold">$0</span>
-                <span className="text-zinc-500">USD</span>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">Starter</h3>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-6xl font-extrabold text-gray-900">$0</span>
+                <span className="text-gray-600 font-semibold text-lg">/ month</span>
               </div>
-              <p className="text-green-500 text-sm mt-2">
-                MIT Licensed, No Restrictions
+              <p className="text-gray-600 text-base font-medium">
+                Perfect for solo founders testing the waters
               </p>
             </div>
 
             <div className="space-y-4 mb-8">
-              <Feature>Spring Boot 3 + Java 21 backend</Feature>
-              <Feature>Next.js 16 + React 19 frontend</Feature>
-              <Feature>Supabase authentication (JWT)</Feature>
-              <Feature>PostgreSQL + Flyway migrations</Feature>
-              <Feature>Stripe payment integration</Feature>
-              <Feature>Mailgun email system</Feature>
-              <Feature>Docker & Docker Compose</Feature>
-              <Feature>TypeScript + Tailwind CSS v4</Feature>
-              <Feature>Security best practices (CSP, CORS)</Feature>
-              <Feature>Performance optimized (virtual threads)</Feature>
-              <Feature>Comprehensive documentation</Feature>
-              <Feature>Production-ready setup</Feature>
+              <Feature>1 SaaS project</Feature>
+              <Feature>3 connected channels</Feature>
+              <Feature>Basic analytics</Feature>
+              <Feature>7-day data history</Feature>
+              <Feature>Daily sync updates</Feature>
             </div>
 
             <a
-              href="https://github.com/bapierre/Java-Next-boilerplate"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-green-500 hover:bg-green-400 transition-colors text-black font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+              href="/auth/register"
+              className="w-full block text-center bg-gray-200 hover:bg-gray-300 transition-all text-gray-900 font-bold py-4 px-4 rounded-xl text-lg shadow-lg hover:shadow-xl"
             >
-              <span>⚡</span> Clone on GitHub
+              Get Started Free
             </a>
-            <p className="text-center text-zinc-500 text-sm mt-4">
-              Star the repo if you find it useful!
+          </div>
+
+          {/* Pro Plan */}
+          <div className="rounded-2xl bg-gradient-to-br from-purple-600 to-purple-800 p-8 relative shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105">
+            <div className="absolute -top-4 right-8 bg-yellow-400 text-gray-900 text-sm font-extrabold px-5 py-2 rounded-full shadow-lg">
+              POPULAR
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-3xl font-bold text-white mb-2">Pro</h3>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-6xl font-extrabold text-white">$29</span>
+                <span className="text-purple-200 font-semibold text-lg">/ month</span>
+              </div>
+              <p className="text-purple-100 text-base font-medium">
+                For growing teams managing multiple products
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <FeatureWhite>Unlimited projects</FeatureWhite>
+              <FeatureWhite>Unlimited channels</FeatureWhite>
+              <FeatureWhite>Advanced analytics & insights</FeatureWhite>
+              <FeatureWhite>90-day data history</FeatureWhite>
+              <FeatureWhite>Hourly sync updates</FeatureWhite>
+              <FeatureWhite>Post performance comparisons</FeatureWhite>
+              <FeatureWhite>Export data (CSV, PDF)</FeatureWhite>
+              <FeatureWhite>Priority support</FeatureWhite>
+            </div>
+
+            <a
+              href="/auth/register?plan=pro"
+              className="w-full block text-center bg-white hover:bg-gray-50 transition-all text-purple-700 font-extrabold py-4 px-4 rounded-xl shadow-2xl text-lg hover:shadow-3xl"
+            >
+              Start Pro Trial
+            </a>
+            <p className="text-center text-purple-100 text-base font-semibold mt-4">
+              14-day free trial, no credit card required
             </p>
           </div>
         </div>
 
-        {/* Additional Info */}
-        <div className="mt-16 max-w-3xl mx-auto">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-            <h4 className="text-lg font-semibold mb-4 text-white">What's included?</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-zinc-400">
-              <div>
-                <p className="font-semibold text-white mb-2">Backend</p>
-                <ul className="space-y-1">
-                  <li>• Spring Boot REST API</li>
-                  <li>• JWT authentication filter</li>
-                  <li>• Stripe webhook handling</li>
-                  <li>• Email service layer</li>
-                  <li>• Database entities & repos</li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-semibold text-white mb-2">Frontend</p>
-                <ul className="space-y-1">
-                  <li>• Auth pages (login, register)</li>
-                  <li>• Dashboard with protected routes</li>
-                  <li>• Checkout button component</li>
-                  <li>• API client with timeout handling</li>
-                  <li>• Responsive landing page</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        {/* FAQ Link */}
+        <div className="mt-16 text-center">
+          <p className="text-gray-600 mb-4">
+            Have questions about pricing?{" "}
+            <a href="#faq" className="text-purple-600 hover:text-purple-700 font-semibold underline">
+              Check our FAQ
+            </a>
+          </p>
         </div>
       </div>
     </div>
@@ -101,8 +107,17 @@ export default function PricingSection() {
 function Feature({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-      <span className="text-zinc-300">{children}</span>
+      <Check className="w-6 h-6 text-purple-600 flex-shrink-0 mt-0.5 stroke-[3]" />
+      <span className="text-gray-700 font-medium text-base">{children}</span>
+    </div>
+  );
+}
+
+function FeatureWhite({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Check className="w-6 h-6 text-white flex-shrink-0 mt-0.5 stroke-[3]" />
+      <span className="text-white font-medium text-base">{children}</span>
     </div>
   );
 }

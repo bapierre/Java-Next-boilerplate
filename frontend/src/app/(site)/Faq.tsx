@@ -5,54 +5,44 @@ interface FAQItem {
 
 const faqs: FAQItem[] = [
   {
-    question: "What is Java-Next Boilerplate?",
+    question: "What platforms does MarketiStats support?",
     answer:
-      "A full-stack SaaS boilerplate combining Spring Boot 3 (Java 21) backend with Next.js 16 frontend. It includes authentication, payments, email, and everything you need to launch a production-ready SaaS application.",
+      "Currently, MarketiStats tracks TikTok, Instagram, and YouTube Shorts. We're focusing on short-form video content across these three major platforms to give you a complete view of your marketing performance.",
   },
   {
-    question: "Is this really free?",
+    question: "How often does the data sync?",
     answer:
-      "Yes! Java-Next Boilerplate is open-source under the MIT license. You can use it for personal or commercial projects without any restrictions.",
+      "Free plan: Daily sync updates. Pro plan: Hourly sync updates. You can also manually trigger a sync anytime from your dashboard to get the latest stats.",
   },
   {
-    question: "What technologies does it use?",
+    question: "Can I track multiple SaaS projects?",
     answer:
-      "Backend: Spring Boot 3, Java 21, PostgreSQL, Flyway. Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS v4. Integrations: Supabase Auth, Stripe, Mailgun. Infrastructure: Docker, Docker Compose.",
+      "Yes! Pro plan users get unlimited projects. This is perfect if you're managing marketing for multiple products and want to see all your stats in one place.",
   },
   {
-    question: "What do I need to get started?",
+    question: "Do I need API keys for each platform?",
     answer:
-      "You need Java 21+, Maven, Node.js 20+, npm, and accounts for Supabase (database + auth), Stripe (payments), and optionally Mailgun (emails). All are free to start.",
+      "Yes, you'll need to connect your accounts through OAuth or provide API keys for each platform you want to track. We provide step-by-step guides for each integration.",
   },
   {
-    question: "How is authentication handled?",
+    question: "How far back can I see historical data?",
     answer:
-      "Authentication uses Supabase Auth with JWT tokens stored in cookies. The backend validates JWTs using Spring Security with JWKS caching for performance. Supports email/password, magic links, and Google OAuth.",
+      "Free plan: 7-day data history. Pro plan: 90-day data history. This lets you track trends and compare performance over time to optimize your marketing strategy.",
   },
   {
-    question: "Can I use this for commercial projects?",
+    question: "Is there a free trial?",
     answer:
-      "Absolutely! The MIT license allows you to use this boilerplate for any purpose, including commercial projects. You can modify, distribute, and sell applications built with it.",
+      "Yes! You can start with our free Starter plan (no credit card required). Pro plan also includes a 14-day free trial so you can test all premium features before committing.",
   },
   {
-    question: "How do I deploy this to production?",
+    question: "Can I export my data?",
     answer:
-      "The project includes Docker and Docker Compose configurations for easy deployment. You can deploy to any cloud provider that supports Docker (AWS, Google Cloud, DigitalOcean, Render, Railway, etc.).",
+      "Pro plan users can export data in CSV or PDF format. This is great for reporting, sharing with your team, or analyzing data in your preferred tools.",
   },
   {
-    question: "Does it include a database?",
+    question: "What metrics do you track?",
     answer:
-      "Yes! It uses PostgreSQL with Flyway for version-controlled migrations. The default setup connects to Supabase's managed PostgreSQL, but you can use any PostgreSQL instance.",
-  },
-  {
-    question: "How are payments handled?",
-    answer:
-      "Stripe integration is built-in with checkout sessions, subscription management, and webhook handling. The backend securely validates webhook signatures and updates your database accordingly.",
-  },
-  {
-    question: "Can I contribute to this project?",
-    answer:
-      "Yes! This is an open-source project and we welcome contributions. Feel free to submit issues, feature requests, or pull requests on GitHub.",
+      "We track views, likes, comments, shares, follower growth, engagement rates, and watch time for each post. You'll also get channel-level stats and performance comparisons across platforms.",
   },
 ];
 
@@ -60,37 +50,35 @@ export default function FAQ() {
   return (
     <div
       id="faq"
-      className="min-h-screen bg-[#0F0F0F] px-4 py-12 md:px-6 lg:px-8"
+      className="min-h-screen bg-purple-50 px-4 py-24 md:px-6 lg:px-8"
     >
-      <div className="mx-auto max-w-3xl">
-        <h2 className="mb-4 text-center text-4xl font-medium text-white">
+      <div className="mx-auto max-w-4xl">
+        <p className="text-purple-700 font-bold mb-4 uppercase tracking-wider text-sm text-center">FAQ</p>
+        <h2 className="mb-6 text-center text-5xl md:text-6xl font-extrabold text-gray-900">
           Frequently Asked Questions
         </h2>
-        <p className="mb-12 text-center text-base text-zinc-500">
-          Have another question? Open an issue on{" "}
+        <p className="mb-16 text-center text-xl text-gray-700 font-medium">
+          Have another question?{" "}
           <a
-            href="https://github.com/bapierre/Java-Next-boilerplate/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-zinc-200 hover:text-white underline"
+            href="mailto:support@marketistats.com"
+            className="text-purple-700 hover:text-purple-800 underline font-bold"
           >
-            GitHub
+            Contact us
           </a>
-          .
         </p>
 
-        <div className="space-y-[2px]">
+        <div className="space-y-4">
           {faqs.map((faq, index) => (
-            <details key={index} className="group overflow-hidden">
-              <summary className="flex w-full cursor-pointer items-center justify-between bg-zinc-900/50 px-6 py-4 text-left transition-colors hover:bg-zinc-900 list-none [&::-webkit-details-marker]:hidden">
-                <span className="text-[16px] font-medium text-white">
+            <details key={index} className="group overflow-hidden rounded-xl border-2 border-gray-300 shadow-lg hover:shadow-xl transition-all">
+              <summary className="flex w-full cursor-pointer items-center justify-between bg-white px-6 py-5 text-left transition-colors hover:bg-gray-50 list-none [&::-webkit-details-marker]:hidden">
+                <span className="text-lg font-bold text-gray-900">
                   {faq.question}
                 </span>
-                <span className="ml-6 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700">
-                  <PlusIcon className="h-3 w-3 text-white transition-transform duration-200 group-open:rotate-45" />
+                <span className="ml-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-purple-600 bg-purple-50">
+                  <PlusIcon className="h-4 w-4 text-purple-700 transition-transform duration-200 group-open:rotate-45 stroke-[3]" />
                 </span>
               </summary>
-              <div className="bg-zinc-900/30 px-6 py-4 text-base text-zinc-400">
+              <div className="bg-gray-50 px-6 py-5 text-base text-gray-700 border-t-2 border-gray-200 font-medium leading-relaxed">
                 {faq.answer}
               </div>
             </details>

@@ -1,78 +1,67 @@
 import Link from "next/link";
-import { Zap } from "lucide-react";
-import Image from "next/image";
+import { TrendingUp, BarChart3, Activity } from "lucide-react";
 
 const HeroSection = () => {
   return (
-    <div className="bg-[#212121] mt-6 min-h-screen flex items-center px-4 sm:px-6 md:px-8 lg:px-12">
-      <div className="max-w-7xl w-full mx-auto py-16 flex flex-col lg:flex-row justify-between items-center">
-        <div className="w-full lg:w-1/2 mb-12 lg:mb-0 text-center lg:text-left">
-          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-[#2C2C2C] rounded-full">
-            <span className="text-green-400 text-sm font-medium">✓ Open Source</span>
-            <span className="text-zinc-400 text-sm">•</span>
-            <span className="text-blue-400 text-sm font-medium">Production Ready</span>
+    <div className="bg-white mt-6 min-h-screen flex items-center px-4 sm:px-6 md:px-8 lg:px-12">
+      <div className="max-w-7xl w-full mx-auto py-20">
+        <div className="text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 mb-8 px-5 py-2 bg-purple-100 rounded-full border-2 border-purple-300">
+            <Activity className="w-5 h-5 text-purple-700" />
+            <span className="text-purple-700 text-base font-bold">Live Analytics</span>
+            <span className="text-gray-400 text-sm">•</span>
+            <span className="text-purple-700 text-base font-bold">Multi-Channel</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 text-[#CFCFCF] leading-tight">
-            Full-Stack SaaS
+          {/* Main Heading */}
+          <h1 className="text-6xl sm:text-7xl md:text-8xl font-black mb-8 text-gray-900 leading-tight">
+            All Your Marketing Stats
             <br />
-            <span className="bg-[#CFCFCF] text-[#2E1A05] px-2">in Minutes</span>
+            <span className="bg-gradient-to-r from-purple-600 via-purple-500 to-purple-700 bg-clip-text text-transparent">
+              In One Place
+            </span>
           </h1>
 
-          <p className="text-base text-[#CFCFCF] mb-8 max-w-2xl mx-auto lg:mx-0">
-            Production-ready boilerplate combining{" "}
-            <span className="text-[#FFBE1A] font-semibold">Spring Boot 3</span> backend with{" "}
-            <span className="text-[#FFBE1A] font-semibold">Next.js 16</span> frontend.
-            Includes authentication, payments, email, and all the features you need to launch fast.
+          {/* Subheading */}
+          <p className="text-2xl text-gray-700 mb-14 max-w-4xl mx-auto leading-relaxed font-semibold">
+            Track TikTok, Instagram, and YouTube Shorts performance across all your SaaS products.
+            Stop switching between platforms—see everything in one unified dashboard.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start mb-8">
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-5 items-center justify-center mb-20">
             <Link
-              href="https://github.com/bapierre/Java-Next-boilerplate"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-[#FFBE1A] hover:bg-yellow-500 text-black px-8 py-3 rounded-xl font-medium text-lg transition-colors duration-300"
+              href="/auth/register"
+              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-10 py-5 rounded-xl font-extrabold text-xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105"
             >
-              <Zap fill="#000000" className="w-5 h-5" />
-              Get Started
+              <TrendingUp className="w-6 h-6" />
+              Start Tracking Free
             </Link>
             <Link
               href="#features"
-              className="inline-flex items-center justify-center gap-2 border-2 border-[#CFCFCF] hover:bg-[#CFCFCF] hover:text-[#212121] text-[#CFCFCF] px-8 py-3 rounded-xl font-medium text-lg transition-all duration-300"
+              className="inline-flex items-center justify-center gap-2 border-3 border-purple-400 hover:border-purple-500 text-purple-700 hover:bg-purple-100 px-10 py-5 rounded-xl font-extrabold text-xl transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              View Features
+              <BarChart3 className="w-6 h-6" />
+              See How It Works
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto lg:mx-0">
-            <div className="text-center lg:text-left">
-              <div className="text-[#FFBE1A] font-bold text-2xl">Spring Boot</div>
-              <div className="text-zinc-400 text-sm">Backend</div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-2xl p-8 hover:border-purple-400 hover:shadow-xl transition-all">
+              <div className="text-5xl font-black text-purple-700 mb-3">3+</div>
+              <div className="text-gray-700 text-base font-bold">Platforms Supported</div>
             </div>
-            <div className="text-center lg:text-left">
-              <div className="text-[#FFBE1A] font-bold text-2xl">Next.js 16</div>
-              <div className="text-zinc-400 text-sm">Frontend</div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-2xl p-8 hover:border-purple-400 hover:shadow-xl transition-all">
+              <div className="text-5xl font-black text-purple-700 mb-3">Real-time</div>
+              <div className="text-gray-700 text-base font-bold">Analytics Tracking</div>
             </div>
-            <div className="text-center lg:text-left">
-              <div className="text-[#FFBE1A] font-bold text-2xl">Supabase</div>
-              <div className="text-zinc-400 text-sm">Auth + DB</div>
-            </div>
-            <div className="text-center lg:text-left">
-              <div className="text-[#FFBE1A] font-bold text-2xl">Stripe</div>
-              <div className="text-zinc-400 text-sm">Payments</div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-2xl p-8 hover:border-purple-400 hover:shadow-xl transition-all">
+              <div className="text-5xl font-black text-purple-700 mb-3">Unlimited</div>
+              <div className="text-gray-700 text-base font-bold">Projects & Channels</div>
             </div>
           </div>
-        </div>
-
-        <div className="w-full lg:w-2/5 flex justify-center lg:justify-end">
-          <Image
-            src="/techstack.webp"
-            alt="Tech Stack Visualization"
-            width={500}
-            height={500}
-            priority
-            className="w-full max-w-md lg:max-w-full h-auto"
-          />
         </div>
       </div>
     </div>

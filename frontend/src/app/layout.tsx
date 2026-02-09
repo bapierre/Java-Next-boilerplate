@@ -10,22 +10,20 @@ const bricolageGrotesque = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Java-Next Boilerplate",
+  title: "MarketiStats - Unified Marketing Analytics Dashboard",
   description:
-    "Open-source full-stack SaaS boilerplate with Spring Boot 3, Next.js 16, Supabase Auth, Stripe payments, and production-ready features. Launch your startup fast.",
+    "Track all your marketing stats in one place. Connect TikTok, Instagram, YouTube Shorts and monitor performance across all your channels.",
   keywords: [
-    "java",
-    "spring boot",
-    "next.js",
-    "saas",
-    "boilerplate",
-    "open source",
-    "supabase",
-    "stripe",
-    "full-stack",
-    "typescript",
-    "react",
-    "postgresql",
+    "marketing analytics",
+    "social media analytics",
+    "tiktok analytics",
+    "instagram analytics",
+    "youtube analytics",
+    "marketing dashboard",
+    "saas analytics",
+    "content marketing",
+    "social media stats",
+    "marketing metrics",
   ],
 };
 

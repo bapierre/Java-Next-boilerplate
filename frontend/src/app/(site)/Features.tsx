@@ -1,76 +1,67 @@
-import { CheckCircle2, Code, Database, Lock, Mail, CreditCard, Gauge, Shield } from "lucide-react";
+import { Video, BarChart2, TrendingUp, Zap, Users, Eye, Heart, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 interface Feature {
   icon: React.ReactNode;
   title: string;
   description: string;
-  tech: string;
 }
 
 export default function FeaturesSection() {
   const features: Feature[] = [
     {
-      icon: <Lock className="w-6 h-6 text-green-400" />,
-      title: "Authentication Ready",
-      description: "Complete auth system with JWT validation, cookie-based sessions, email/password, magic links, and Google OAuth.",
-      tech: "Supabase Auth + Spring Security"
+      icon: <Video className="w-7 h-7 text-white" />,
+      title: "Multi-Platform Tracking",
+      description: "Connect TikTok, Instagram, and YouTube Shorts accounts. Track all your short-form video content in one dashboard."
     },
     {
-      icon: <CreditCard className="w-6 h-6 text-blue-400" />,
-      title: "Payment Integration",
-      description: "Full Stripe integration with checkout sessions, subscription management, and secure webhook handling.",
-      tech: "Stripe API + Spring Boot"
+      icon: <BarChart2 className="w-7 h-7 text-white" />,
+      title: "Performance Analytics",
+      description: "See views, likes, comments, and shares for each post. Identify your best-performing content at a glance."
     },
     {
-      icon: <Database className="w-6 h-6 text-purple-400" />,
-      title: "Database Migrations",
-      description: "Version-controlled database schema with Flyway migrations, PostgreSQL with Spring Data JPA.",
-      tech: "Flyway + PostgreSQL"
+      icon: <TrendingUp className="w-7 h-7 text-white" />,
+      title: "Growth Tracking",
+      description: "Monitor follower growth, engagement rates, and channel performance over time with historical data."
     },
     {
-      icon: <Mail className="w-6 h-6 text-yellow-400" />,
-      title: "Email System",
-      description: "Transactional emails with Mailgun integration, webhook signature verification, and template support.",
-      tech: "Mailgun API"
+      icon: <Zap className="w-7 h-7 text-white" />,
+      title: "Real-Time Updates",
+      description: "Get the latest stats for your channels and posts. Stay on top of trending content as it happens."
     },
     {
-      icon: <Code className="w-6 h-6 text-cyan-400" />,
-      title: "Modern Frontend",
-      description: "Next.js 16 with App Router, React 19, TypeScript, Tailwind CSS v4, and server components.",
-      tech: "Next.js + React + TypeScript"
+      icon: <Users className="w-7 h-7 text-white" />,
+      title: "Multi-Project Support",
+      description: "Managing multiple SaaS products? Track marketing stats for all your projects in one place."
     },
     {
-      icon: <Gauge className="w-6 h-6 text-orange-400" />,
-      title: "Performance Optimized",
-      description: "Virtual threads (Java 21), Spring Cache, async processing, AVIF/WebP image optimization.",
-      tech: "Java 21 + Spring Boot 3"
+      icon: <Eye className="w-7 h-7 text-white" />,
+      title: "Content Insights",
+      description: "Compare post performance across platforms. See what content resonates best with your audience."
     },
     {
-      icon: <Shield className="w-6 h-6 text-red-400" />,
-      title: "Security First",
-      description: "CSP headers, CORS configuration, JWKS caching, webhook signature validation, non-root Docker containers.",
-      tech: "Spring Security + Next.js"
+      icon: <Heart className="w-7 h-7 text-white" />,
+      title: "Engagement Metrics",
+      description: "Track engagement rates, watch time, and audience interaction metrics for every piece of content."
     },
     {
-      icon: <CheckCircle2 className="w-6 h-6 text-green-400" />,
-      title: "Production Ready",
-      description: "Docker Compose setup, multi-stage Dockerfiles, health checks, logging, and comprehensive documentation.",
-      tech: "Docker + Docker Compose"
+      icon: <MessageCircle className="w-7 h-7 text-white" />,
+      title: "Channel Overview",
+      description: "Get a bird's-eye view of all your social channels. See total reach, engagement, and content performance."
     }
   ];
 
   return (
-    <div id="features" className="bg-[#0F0F0F] py-20 px-4">
+    <div id="features" className="bg-purple-100 py-24 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-[#FFBE18] font-medium mb-4">Features</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Everything You Need to Ship Fast
+        <div className="text-center mb-20">
+          <p className="text-purple-700 font-bold mb-4 uppercase tracking-wider text-sm">Features</p>
+          <h2 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6">
+            Everything You Need to Track Your Marketing
           </h2>
-          <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-            Production-ready features built with modern technologies. No more spending weeks on boilerplate code.
+          <p className="text-gray-700 text-xl max-w-3xl mx-auto font-medium">
+            Stop juggling multiple analytics dashboards. MarketiStats brings all your marketing data together.
           </p>
         </div>
 
@@ -79,20 +70,30 @@ export default function FeaturesSection() {
           {features.map((feature, index) => (
             <Card
               key={index}
-              className="bg-[#1C1C1C] border-zinc-800 p-6 hover:border-zinc-700 transition-colors"
+              className="bg-white border-2 border-gray-200 p-6 hover:border-purple-400 hover:shadow-2xl transition-all duration-300"
             >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="mb-4 p-3 bg-purple-600 rounded-xl w-fit">{feature.icon}</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
                 {feature.title}
               </h3>
-              <p className="text-zinc-400 text-sm mb-4">
+              <p className="text-gray-600 text-base leading-relaxed">
                 {feature.description}
               </p>
-              <div className="inline-block bg-zinc-800 text-zinc-300 text-xs px-3 py-1 rounded-full">
-                {feature.tech}
-              </div>
             </Card>
           ))}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-20 text-center">
+          <p className="text-gray-700 mb-6 text-lg font-medium">
+            Ready to see your marketing stats in action?
+          </p>
+          <a
+            href="/auth/register"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
+          >
+            Get Started Free
+          </a>
         </div>
       </div>
     </div>
