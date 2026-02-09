@@ -40,7 +40,7 @@ export default function TestimonialsPage() {
           <span className="font-bold text-green-400">
             Just clone, tweak, and launch.
           </span>{" "}
-          ShipFree made everything seamless and stress-free!
+          Java-Next Boilerplate made everything seamless and stress-free!
         </>
       ),
       role: "Founder",
@@ -51,7 +51,7 @@ export default function TestimonialsPage() {
       name: "Gabriel",
       text: (
         <>
-          ShipFree is hands down{" "}
+          Java-Next Boilerplate is hands down{" "}
           <span className="font-bold text-blue-400">
             the best open-source SaaS boilerplate!{" "}
           </span>
@@ -68,7 +68,7 @@ export default function TestimonialsPage() {
       rating: 4,
       text: (
         <>
-          Without ShipFree, I&apos;d still be wrestling with Stripe and email
+          Without Java-Next Boilerplate, I&apos;d still be wrestling with Stripe and email
           configurations!{" "}
           <span className="font-bold text-purple-400">
             It saved me countless hours{" "}
@@ -84,11 +84,11 @@ export default function TestimonialsPage() {
       name: "Matt Merrick",
       text: (
         <>
-          I launched with ShipFree boilerplate and have{" "}
+          I launched with Java-Next Boilerplate boilerplate and have{" "}
           <span className="font-bold text-pink-400">
             landed 5 new customers
           </span>
-          ! Thanks @idee8agency
+          ! Thanks @yourhandle
         </>
       ),
       role: "Founder",
@@ -100,7 +100,7 @@ export default function TestimonialsPage() {
       rating: 5,
       text: (
         <>
-          I used ShipFree to build my SaaS, and{" "}
+          I used Java-Next Boilerplate to build my SaaS, and{" "}
           <span className="font-bold text-orange-400">
             in just two weeks, I had my first MRR.
           </span>{" "}
@@ -131,7 +131,7 @@ export default function TestimonialsPage() {
       name: "Alex Chen",
       text: (
         <>
-          As a solo developer, ShipFree has been a game-changer. I&apos;ve{" "}
+          As a solo developer, Java-Next Boilerplate has been a game-changer. I&apos;ve{" "}
           <span className="font-bold text-indigo-400">
             launched two products
           </span>{" "}
@@ -147,7 +147,7 @@ export default function TestimonialsPage() {
       rating: 5,
       text: (
         <>
-          The ShipFree boilerplate saved me{" "}
+          The Java-Next Boilerplate boilerplate saved me{" "}
           <span className="font-bold text-red-400">
             weeks of development time
           </span>

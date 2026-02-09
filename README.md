@@ -1,347 +1,286 @@
-# MarketiStats
+# Java-Next Boilerplate
 
-Full-stack SaaS application with Next.js frontend and Spring Boot backend.
+Full-stack SaaS boilerplate with a **Next.js 16** frontend and **Spring Boot 3.2** backend, designed to be cloned and customized for new projects.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS v4 |
+| Backend | Spring Boot 3.2, Java 21, Lombok |
+| Auth | Supabase (JWT, cookie-based) |
+| Database | PostgreSQL (Supabase) + Flyway migrations |
+| Payments | Stripe (checkout sessions, subscriptions, webhooks) |
+| Email | Mailgun (transactional emails, webhook forwarding) |
+| Containerization | Docker + Docker Compose |
 
 ## What's Included
 
-- 🔐 **Authentication** - Supabase Auth with email/password and social logins
-- 💳 **Payments** - Stripe and LemonSqueezy integration for subscriptions and one-time payments
-- 📧 **Email** - Mailgun for transactional emails and notifications
-- 🗄️ **Database** - PostgreSQL with Drizzle ORM (type-safe queries)
-- 🎨 **UI Components** - Beautiful, responsive components with TailwindCSS and Radix UI
-- 🚀 **SEO Optimized** - Meta tags, sitemaps, and best practices built-in
-- 🐳 **Docker Ready** - Development and production Docker configurations
-- 🔒 **Security** - Security headers and best practices configured
+- **Authentication** -- Supabase Auth with email/password, magic links, and Google OAuth
+- **Payments** -- Stripe checkout sessions, subscription management, and webhook handling
+- **Email** -- Mailgun transactional emails with webhook signature verification
+- **Database** -- PostgreSQL with Flyway migrations and Spring Data JPA
+- **Security** -- CSP headers, CORS, JWT validation with JWKS caching, webhook signature verification, non-root Docker containers
+- **Performance** -- Virtual threads (Java 21), Spring Cache, async webhook processing, AVIF/WebP image optimization, server components
+- **UI** -- Tailwind CSS v4, Radix UI primitives, Lucide icons
+- **Docker** -- Production-ready multi-stage Dockerfiles for both services
 
 ## Prerequisites
 
-- Node.js 18+ installed
-- pnpm installed (`npm install -g pnpm`)
-- A Supabase account (free tier available)
-- A Stripe account (free test mode)
-- A Mailgun account (free tier available)
-- Optional: LemonSqueezy account
-
-## Quick Start
-
-### 1. Clone and Install
-
-```bash
-git clone <your-repo-url>
-cd ShipFree
-pnpm install
-```
-
-### 2. Set Up Environment Variables
-
-Copy the environment template:
-
-```bash
-cp .env.example .env
-```
-
-Now fill in your `.env` file with the following credentials:
-
-### 3. Set Up Supabase (Authentication & Backend)
-
-1. Go to [supabase.com](https://supabase.com) and create a free account
-2. Create a new project
-3. Once created, go to **Settings** → **API**
-4. Copy your credentials to `.env`:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-5. In Supabase dashboard, go to **Authentication** → **Providers**
-6. Enable **Email** provider (enabled by default)
-7. Optional: Enable social providers (Google, GitHub, etc.)
-
-### 4. Set Up PostgreSQL Database
-
-**Option A: Use Supabase Database (Recommended for beginners)**
-
-1. Supabase provides a PostgreSQL database automatically
-2. Go to **Settings** → **Database** in Supabase
-3. Copy the connection string (URI format)
-4. Add to `.env`:
-
-```env
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.xxxxxxxxxxxxx.supabase.co:5432/postgres
-```
-
-**Option B: Use Local PostgreSQL with Docker**
-
-```bash
-# Start PostgreSQL with Docker
-docker-compose -f docker/dev/docker-compose.yml -f docker/dev/docker-compose.postgres.yml up -d
-
-# Add to .env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/shipfree
-```
-
-5. Run database migrations:
-
-```bash
-pnpm drizzle-kit push
-```
-
-### 5. Set Up Stripe (Payments)
-
-1. Go to [stripe.com](https://stripe.com) and create an account
-2. Go to **Developers** → **API keys**
-3. Copy your **Publishable key** and **Secret key** (use test mode keys)
-4. Add to `.env`:
-
-```env
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
-STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxx
-```
-
-5. Set up webhooks for production:
-   - Go to **Developers** → **Webhooks**
-   - Click **Add endpoint**
-   - URL: `https://yourdomain.com/api/stripe/webhook`
-   - Select events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-   - Copy the **Signing secret** and add to `.env` as `STRIPE_WEBHOOK_SECRET`
-
-### 6. Set Up Mailgun (Email)
-
-1. Go to [mailgun.com](https://mailgun.com) and create an account
-2. Add and verify your domain (or use Mailgun's sandbox domain for testing)
-3. Go to **Settings** → **API Keys**
-4. Copy your **Private API key**
-5. Add to `.env`:
-
-```env
-MAILGUN_API_KEY=your-api-key-here
-MAILGUN_DOMAIN=mg.yourdomain.com
-MAILGUN_FROM_EMAIL=noreply@yourdomain.com
-```
-
-6. Update email settings in `src/config.ts`:
-
-```typescript
-export const config = {
-  appName: "YourAppName",
-  domainName: "https://yourdomain.com",
-  mailgun: {
-    subdomain: "mg",
-    fromNoReply: `YourApp <noreply@mg.yourdomain.com>`,
-    fromAdmin: `YourName at YourApp <admin@mg.yourdomain.com>`,
-    supportEmail: "support@yourdomain.com",
-    forwardRepliesTo: "youremail@gmail.com",
-  },
-};
-```
-
-### 7. Optional: Set Up LemonSqueezy (Alternative Payment Processor)
-
-1. Go to [lemonsqueezy.com](https://lemonsqueezy.com) and create an account
-2. Go to **Settings** → **API**
-3. Create an API key
-4. Find your Store ID in **Settings** → **Stores**
-5. Add to `.env`:
-
-```env
-LEMON_SQUEEZY_API_KEY=your-api-key-here
-LEMON_SQUEEZY_STORE_ID=your-store-id
-```
-
-### 8. Run the Development Server
-
-```bash
-pnpm dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+- Node.js 20+
+- npm
+- Java 21+
+- Maven 3.9+
+- A [Supabase](https://supabase.com) account
+- A [Stripe](https://stripe.com) account
+- A [Mailgun](https://mailgun.com) account (optional)
 
 ## Project Structure
 
 ```
-src/
-├── app/                      # Next.js App Router
-│   ├── (site)/              # Public landing page components
-│   ├── api/                 # API routes (Stripe, Mailgun, etc.)
-│   ├── auth/                # Authentication pages (login, register)
-│   ├── dashboard/           # Protected dashboard area
-│   └── layout.tsx           # Root layout
-├── components/              # Reusable components
-│   └── ui/                  # UI components (buttons, cards, etc.)
-├── db/                      # Database configuration
-│   ├── schema.ts            # Database schema (Drizzle ORM)
-│   └── index.ts             # Database connection
-├── lib/                     # Third-party integrations
-│   ├── supabase/            # Supabase client setup
-│   ├── mailgun.ts           # Mailgun email service
-│   └── utils.ts             # Utility functions
-└── config.ts                # App configuration
+java-next-boilerplate/
+├── frontend/                  # Next.js 16 application
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (site)/       # Landing page components (server components)
+│   │   │   ├── api/          # API routes (mailgun webhook)
+│   │   │   ├── auth/         # Login, register, confirm pages
+│   │   │   ├── dashboard/    # Protected dashboard
+│   │   │   └── layout.tsx    # Root layout with metadata
+│   │   ├── components/       # Reusable components
+│   │   │   ├── ui/           # Base UI (button, card, input, label)
+│   │   │   ├── CheckoutButton.tsx
+│   │   │   ├── LoginForm/
+│   │   │   └── RegisterForm.tsx
+│   │   ├── lib/
+│   │   │   ├── api-client.ts # Backend HTTP client (fetch + timeout)
+│   │   │   ├── supabase/     # Supabase client/server/middleware
+│   │   │   └── mailgun.ts    # Mailgun email sending
+│   │   └── config.ts         # App name, domain, email settings
+│   ├── middleware.ts          # Supabase auth middleware
+│   ├── next.config.ts         # Security headers, image optimization
+│   └── Dockerfile
+│
+├── backend/                   # Spring Boot 3.2 application
+│   ├── src/main/java/com/javanextboilerplate/
+│   │   ├── config/           # CORS, Security, Stripe configuration
+│   │   ├── controller/       # REST controllers (Stripe, webhooks)
+│   │   ├── dto/              # Request/response DTOs
+│   │   ├── entity/           # JPA entities (User, Subscription)
+│   │   ├── exception/        # Global error handler
+│   │   ├── repository/       # Spring Data JPA repositories
+│   │   ├── security/         # JWT filter, validator, webhook signatures
+│   │   └── service/          # Business logic (Stripe, User, Subscription)
+│   ├── src/main/resources/
+│   │   ├── application.yml   # All configuration
+│   │   └── db/migration/     # Flyway SQL migrations (V1, V2, V3)
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── docker-compose.yml         # Run both services together
+└── CLAUDE.md                  # AI assistant instructions
 ```
 
-## Available Scripts
+## Quick Start
+
+### 1. Clone and install
 
 ```bash
-# Development
-pnpm dev              # Start development server with Turbopack
-pnpm build            # Build for production
-pnpm start            # Start production server
-
-# Code Quality
-pnpm lint             # Run ESLint
-pnpm format           # Format code with Prettier
-
-# Database
-pnpm drizzle-kit generate    # Generate migrations
-pnpm drizzle-kit push        # Push schema to database
-pnpm drizzle-kit studio      # Open database GUI
+git clone <your-repo-url>
+cd java-next-boilerplate
 ```
 
-## Docker Setup
+### 2. Configure environment variables
 
-### Development with Docker
+**Frontend** -- copy and fill in `frontend/.env.local`:
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+**Backend** -- copy and fill in `backend/.env`:
+```bash
+cp backend/.env.example backend/.env
+```
+
+```env
+DATABASE_URL=postgresql://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_JWT_SECRET=your-jwt-secret
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+MAILGUN_API_KEY=...
+MAILGUN_SIGNING_KEY=...
+MAILGUN_DOMAIN=mg.yourdomain.com
+MAILGUN_FORWARD_TO=your-email@example.com
+FRONTEND_URL=http://localhost:3000
+```
+
+### 3. Set up Supabase
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **Settings > API** -- copy the URL and anon key
+3. Go to **Settings > API > JWT Settings** -- copy the JWT secret
+4. Go to **Settings > Database** -- copy the connection string
+5. Enable **Email** provider under **Authentication > Providers**
+6. (Optional) Enable Google OAuth provider
+
+### 4. Set up Stripe
+
+1. Create an account at [stripe.com](https://stripe.com)
+2. Copy your test **Publishable key** and **Secret key** from **Developers > API keys**
+3. For local webhook testing, install the [Stripe CLI](https://stripe.com/docs/stripe-cli):
+   ```bash
+   stripe listen --forward-to http://localhost:8080/api/webhooks/stripe
+   ```
+   Copy the webhook signing secret from the CLI output.
+
+### 5. Run the application
+
+**Option A: Single command (recommended)**
+
+From the project root:
 
 ```bash
-# With PostgreSQL
-docker-compose -f docker/dev/docker-compose.yml -f docker/dev/docker-compose.postgres.yml up --build
-
-# With MongoDB
-docker-compose -f docker/dev/docker-compose.yml -f docker/dev/docker-compose.mongodb.yml up --build
+./dev.sh
 ```
 
-Access Portainer at [http://localhost:9000](http://localhost:9000) for container management.
+This starts both frontend and backend, showing combined logs. Press `Ctrl+C` to stop, or use `./stop.sh` in another terminal.
 
-### Production with Docker
+**Option B: Manual (two terminals)**
 
 ```bash
-# With PostgreSQL
-docker-compose -f docker/prod/docker-compose.yml -f docker/prod/docker-compose.postgres.yml up --build -d
+# Terminal 1: Backend
+cd backend && mvn spring-boot:run
 
-# With MongoDB
-docker-compose -f docker/prod/docker-compose.yml -f docker/prod/docker-compose.mongodb.yml up --build -d
+# Terminal 2: Frontend
+cd frontend && npm install && npm run dev
 ```
 
-## Customization
+Open [http://localhost:3000](http://localhost:3000).
 
-### Update Branding
-
-1. Edit `src/config.ts` - Update app name and domain
-2. Edit `src/app/layout.tsx` - Update metadata
-3. Replace logo in `public/` folder
-4. Update colors in `tailwind.config.ts`
-
-### Add Database Tables
-
-1. Edit `src/db/schema.ts`:
-
-```typescript
-export const postsTable = pgTable("posts", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  title: varchar({ length: 255 }).notNull(),
-  content: text().notNull(),
-  userId: integer().references(() => usersTable.id),
-});
-```
-
-2. Push changes:
+### 6. Run with Docker (alternative)
 
 ```bash
-pnpm drizzle-kit push
+docker-compose up --build
 ```
 
-### Add New Pages
+Frontend at `localhost:3000`, backend at `localhost:8080`.
 
-Create a new file in `src/app/your-page/page.tsx`:
+## Development Commands
 
-```typescript
-export default function YourPage() {
-  return <div>Your content here</div>;
-}
+```bash
+# Run both services (from root)
+./dev.sh             # Start frontend + backend with combined logs
+./stop.sh            # Stop all services
+
+# Frontend
+cd frontend
+npm run dev          # Dev server (Turbopack)
+npm run build        # Production build
+npm run lint         # ESLint
+
+# Backend
+cd backend
+mvn spring-boot:run  # Dev server
+mvn clean package    # Production JAR
+mvn test             # Run tests
+
+# Stripe webhooks (local)
+stripe listen --forward-to http://localhost:8080/api/webhooks/stripe
 ```
 
-### Add API Routes
+## Architecture
 
-Create `src/app/api/your-route/route.ts`:
+### Authentication Flow
 
-```typescript
-import { NextResponse } from "next/server";
+1. User signs in via Supabase Auth on the frontend
+2. Supabase stores a JWT in an `sb-*-auth-token` cookie
+3. Frontend sends requests to the backend with `credentials: 'include'`
+4. Backend's `SupabaseJwtAuthenticationFilter` extracts and validates the JWT from the cookie
+5. JWKS keys are cached (24h) to avoid per-request fetches to Supabase
 
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
+### Payments Flow
+
+1. User clicks checkout on the frontend
+2. Frontend calls `POST /api/stripe/checkout` on the backend (via `api-client.ts`)
+3. Backend validates the price ID, gets/creates a Stripe customer, creates a checkout session
+4. User completes payment on Stripe's hosted checkout page
+5. Stripe sends a webhook to `POST /api/webhooks/stripe` on the backend
+6. Backend verifies the webhook signature and processes the event asynchronously
+
+### Key Design Decisions
+
+- **Cookie-based auth** -- backend reads JWT from cookies, not Authorization headers. All frontend requests use `credentials: 'include'`.
+- **Server components by default** -- FAQ, pricing, testimonials, footer are all server components (zero client JS). Only interactive components (login forms, mobile menu) use `"use client"`.
+- **Async webhooks** -- Stripe webhooks are acknowledged immediately and processed asynchronously via `@Async` to avoid timeout retries.
+- **Flyway migrations** -- database schema is version-controlled in `backend/src/main/resources/db/migration/`. New migrations run automatically on startup.
+
+## Customizing for a New Project
+
+### 1. Rename and rebrand
+
+- Update `frontend/src/config.ts` with your app name, domain, and email settings
+- Update `frontend/src/app/layout.tsx` metadata
+- Replace `frontend/public/techstack.webp` and other assets with your branding
+- Update landing page copy in `frontend/src/app/(site)/`
+
+### 2. Add a new backend endpoint
+
+1. Create a DTO in `backend/src/.../dto/request/` or `dto/response/`
+2. Add business logic in `backend/src/.../service/`
+3. Create a controller method -- use `@AuthenticationPrincipal SupabaseUserDetails` for the authenticated user
+4. Call it from the frontend via `api-client.ts`
+
+### 3. Add a database table
+
+1. Create a new migration file: `backend/src/main/resources/db/migration/V4__description.sql`
+2. Add a JPA entity in `backend/src/.../entity/`
+3. Add a repository in `backend/src/.../repository/`
+4. Restart the backend -- Flyway runs the migration automatically
+
+### 4. Configure Stripe price IDs
+
+Set `STRIPE_ALLOWED_PRICE_IDS` in `backend/.env` to restrict which Stripe prices can be used:
+```env
+STRIPE_ALLOWED_PRICE_IDS=price_xxx,price_yyy
 ```
-
-## Deployment
-
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com)
-3. Import your repository
-4. Add environment variables from your `.env` file
-5. Deploy!
-
-### Other Platforms
-
-ShipFree works on any platform that supports Next.js:
-- Netlify
-- Railway
-- Render
-- AWS Amplify
-- Self-hosted with Docker
 
 ## Testing Payments
 
-### Stripe Test Cards
-
-- Success: `4242 4242 4242 4242`
-- Decline: `4000 0000 0000 0002`
-- Use any future expiry date and any 3-digit CVC
+Use Stripe test cards:
+- **Success:** `4242 4242 4242 4242`
+- **Decline:** `4000 0000 0000 0002`
+- Any future expiry, any 3-digit CVC
 
 ## Troubleshooting
 
-### "Database connection failed"
+**401 Unauthorized on backend requests**
+- Check the `sb-*-auth-token` cookie exists in browser DevTools
+- Verify `credentials: 'include'` in the fetch request
+- Ensure `SUPABASE_JWT_SECRET` matches Supabase dashboard (Settings > API)
 
-- Check your `DATABASE_URL` is correct
-- Ensure your database is running
-- For Supabase, verify your password is correct
+**CORS errors**
+- Verify `FRONTEND_URL` in `backend/.env` matches your frontend URL exactly
+- Backend CORS is configured in `CorsConfig.java`
 
-### "Stripe webhook failed"
+**Flyway migration fails**
+- Check SQL syntax in the migration file
+- Ensure version numbers are sequential (V1, V2, V3, V4...)
+- View migration history: `SELECT * FROM flyway_schema_history;`
 
-- Webhooks only work in production or with Stripe CLI
-- For local testing, install [Stripe CLI](https://stripe.com/docs/stripe-cli)
-- Run: `stripe listen --forward-to localhost:3000/api/stripe/webhook`
-
-### "Email not sending"
-
-- Verify Mailgun API key and domain
-- Check if domain is verified in Mailgun dashboard
-- For testing, use Mailgun's sandbox domain
-
-### Port already in use
-
-```bash
-lsof -ti:3000 | xargs kill -9
-```
-
-## Documentation
-
-For detailed documentation, visit: [https://shipfree.idee8.agency/docs](https://shipfree.idee8.agency/docs)
-
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Support
-
-- 📖 [Documentation](https://shipfree.idee8.agency/docs)
-- 🐛 [Report Issues](https://github.com/yourusername/shipfree/issues)
-- 💬 [Discussions](https://github.com/yourusername/shipfree/discussions)
+**Stripe webhooks not received locally**
+- Run `stripe listen --forward-to http://localhost:8080/api/webhooks/stripe`
+- Copy the webhook secret from the CLI output to `backend/.env`
+- Restart the backend
 
 ## License
 
-This project is open source and available under the MIT License.
-
----
-
-Built with ❤️ by [Revoks](https://revoks.dev)
+MIT

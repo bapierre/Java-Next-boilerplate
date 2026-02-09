@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.marketistats</groupId>
+    <groupId>com.javanextboilerplate</groupId>
     <artifactId>backend</artifactId>
     <version>1.0.0</version>
-    <name>MarketiStats Backend</name>
-    <description>Spring Boot backend for MarketiStats</description>
+    <name>Java-Next Boilerplate Backend</name>
+    <description>Spring Boot backend for Java-Next Boilerplate</description>
 
     <properties>
         <java.version>21</java.version>

@@ -5,54 +5,54 @@ interface FAQItem {
 
 const faqs: FAQItem[] = [
   {
+    question: "What is Java-Next Boilerplate?",
+    answer:
+      "A full-stack SaaS boilerplate combining Spring Boot 3 (Java 21) backend with Next.js 16 frontend. It includes authentication, payments, email, and everything you need to launch a production-ready SaaS application.",
+  },
+  {
     question: "Is this really free?",
     answer:
-      "Yes! ShipFree is open-source and community-driven. Use it for unlimited projects, no strings attached.",
+      "Yes! Java-Next Boilerplate is open-source under the MIT license. You can use it for personal or commercial projects without any restrictions.",
   },
   {
-    question: "What do I need to use ShipFree?",
+    question: "What technologies does it use?",
     answer:
-      "All you need is a GitHub account to clone the repo and a deployment platform like Vercel or Railway.",
+      "Backend: Spring Boot 3, Java 21, PostgreSQL, Flyway. Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS v4. Integrations: Supabase Auth, Stripe, Mailgun. Infrastructure: Docker, Docker Compose.",
   },
   {
-    question: "Can I customize it?",
+    question: "What do I need to get started?",
     answer:
-      "Built with Next.js, Tailwind, and modern tools, ShipFree is fully extensible.",
+      "You need Java 21+, Maven, Node.js 20+, npm, and accounts for Supabase (database + auth), Stripe (payments), and optionally Mailgun (emails). All are free to start.",
   },
   {
-    question: "How does it compare to ShipFast?",
+    question: "How is authentication handled?",
     answer:
-      "ShipFast is paid; ShipFree gives you similar core features—completely free! Perfect for bootstrappers who want to launch now.",
+      "Authentication uses Supabase Auth with JWT tokens stored in cookies. The backend validates JWTs using Spring Security with JWKS caching for performance. Supports email/password, magic links, and Google OAuth.",
   },
   {
-    question: "Does ShipFree include a database?",
-    answer: "Yes! It supports MongoDB and Supabase out of the box.",
-  },
-  {
-    question: "Is there a community I can join?",
+    question: "Can I use this for commercial projects?",
     answer:
-      "Yes! We have an active Discord community where founders help each other grow.",
+      "Absolutely! The MIT license allows you to use this boilerplate for any purpose, including commercial projects. You can modify, distribute, and sell applications built with it.",
   },
   {
-    question: "What if I need help?",
+    question: "How do I deploy this to production?",
     answer:
-      "We have detailed documentation, video tutorials, and community support to guide you.",
+      "The project includes Docker and Docker Compose configurations for easy deployment. You can deploy to any cloud provider that supports Docker (AWS, Google Cloud, DigitalOcean, Render, Railway, etc.).",
   },
   {
-    question: "Can I contribute to ShipFree?",
+    question: "Does it include a database?",
     answer:
-      "ShipFree is open-source—we welcome contributions from developers worldwide.",
-  },
-
-  {
-    question: "Can I use ShipFree for commercial projects?",
-    answer:
-      "Yes! You can launch and scale real businesses with ShipFree. No restrictions.",
+      "Yes! It uses PostgreSQL with Flyway for version-controlled migrations. The default setup connects to Supabase's managed PostgreSQL, but you can use any PostgreSQL instance.",
   },
   {
-    question: "Is there a roadmap for future features?",
+    question: "How are payments handled?",
     answer:
-      "Yes! We're constantly improving ShipFree. Check our GitHub roadmap to see what's coming next.",
+      "Stripe integration is built-in with checkout sessions, subscription management, and webhook handling. The backend securely validates webhook signatures and updates your database accordingly.",
+  },
+  {
+    question: "Can I contribute to this project?",
+    answer:
+      "Yes! This is an open-source project and we welcome contributions. Feel free to submit issues, feature requests, or pull requests on GitHub.",
   },
 ];
 
@@ -67,21 +67,14 @@ export default function FAQ() {
           Frequently Asked Questions
         </h2>
         <p className="mb-12 text-center text-base text-zinc-500">
-          Have another question? Contact us on{" "}
+          Have another question? Open an issue on{" "}
           <a
-            href="https://x.com/idee8agency"
+            href="https://github.com/bapierre/Java-Next-boilerplate/issues"
             target="_blank"
+            rel="noopener noreferrer"
             className="text-zinc-200 hover:text-white underline"
           >
-            Twitter
-          </a>{" "}
-          or by{" "}
-          <a
-            href="mailto:hi@idee8.agency"
-            target="_blank"
-            className="text-zinc-200 hover:text-white underline"
-          >
-            email
+            GitHub
           </a>
           .
         </p>
@@ -108,20 +101,19 @@ export default function FAQ() {
   );
 }
 
-function PlusIcon({ className = "" }) {
+function PlusIcon({ className }: { className?: string }) {
   return (
     <svg
-      xmlns="http://www.w3.org/2000/svg"
+      className={className}
       fill="none"
       viewBox="0 0 24 24"
-      strokeWidth={1.5}
       stroke="currentColor"
-      className={className}
     >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M12 4.5v15m7.5-7.5h-15"
+        strokeWidth={2}
+        d="M12 4v16m8-8H4"
       />
     </svg>
   );

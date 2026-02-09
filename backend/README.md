@@ -1,6 +1,6 @@
-# MarketiStats Backend
+# Java-Next Boilerplate Backend
 
-Spring Boot backend for MarketiStats application with Supabase authentication, Stripe payments, and webhook integrations.
+Spring Boot backend for Java-Next Boilerplate application with Supabase authentication, Stripe payments, and webhook integrations.
 
 ## Tech Stack
 
@@ -17,8 +17,8 @@ Spring Boot backend for MarketiStats application with Supabase authentication, S
 
 ```
 backend/
-├── src/main/java/com/marketistats/
-│   ├── MarketiStatsApplication.java    # Main application entry point
+├── src/main/java/com/javanextboilerplate/
+│   ├── JavaNextBoilerplateApplication.java    # Main application entry point
 │   ├── config/                          # Configuration classes
 │   │   ├── SecurityConfig.java          # Spring Security + JWT
 │   │   ├── CorsConfig.java              # CORS configuration
@@ -128,10 +128,10 @@ The backend will start on `http://localhost:8080`
 
 ```bash
 # Build the Docker image
-docker build -t marketistats-backend .
+docker build -t java-next-boilerplate-backend .
 
 # Run the container
-docker run -p 8080:8080 --env-file .env marketistats-backend
+docker run -p 8080:8080 --env-file .env java-next-boilerplate-backend
 
 # Or use docker-compose from project root
 cd ..
@@ -226,8 +226,8 @@ java -jar target/backend-1.0.0.jar
 
 ### Docker Deployment
 ```bash
-docker build -t marketistats-backend .
-docker push your-registry/marketistats-backend
+docker build -t java-next-boilerplate-backend .
+docker push your-registry/java-next-boilerplate-backend
 ```
 
 ## Monitoring

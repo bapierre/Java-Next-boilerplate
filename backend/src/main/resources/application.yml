@@ -1,9 +1,14 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
-    name: marketistats-backend
+    name: java-next-boilerplate-backend
 
   datasource:
-    url: ${DATABASE_URL}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:postgres}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -55,7 +60,7 @@ management:
 logging:
   level:
     root: INFO
-    com.marketistats: INFO
+    com.javanextboilerplate: INFO
     org.springframework.security: WARN
 
 supabase:

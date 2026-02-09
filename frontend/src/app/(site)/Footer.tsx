@@ -7,7 +7,7 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-xl font-semibold text-white">
-                ⚡ ShipFree
+                ⚡ Java-Next Boilerplate
               </span>
             </div>
             <p className="text-sm text-zinc-400">Built for makers, by makers</p>
@@ -15,7 +15,7 @@ export default function Footer() {
               Copyright © 2025 - All rights reserved
             </p>
             <div className="inline-flex items-center gap-2 rounded-md border border-zinc-500 bg-zinc-800/50 px-4 py-2 text-xs text-zinc-400">
-              Built with ⚡ ShipFree
+              Built with ⚡ Java-Next Boilerplate
             </div>
           </div>
 
@@ -27,10 +27,10 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href="#wall-of-love"
+                  href="#features"
                   className="text-zinc-400 hover:text-white"
                 >
-                  Wall of love
+                  Features
                 </a>
               </li>
               <li>
@@ -40,7 +40,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://x.com/idee8agency"
+                  href="https://twitter.com/yourhandle"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
@@ -50,7 +50,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/idee8/shipfree"
+                  href="https://github.com/bapierre/Java-Next-boilerplate"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
@@ -60,7 +60,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://shipfree.idee8.agency/docs"
+                  href="https://github.com/bapierre/Java-Next-boilerplate/docs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
@@ -99,12 +99,12 @@ export default function Footer() {
           {/* By the Creator Column */}
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              🌎 By the Creator of ShipFree
+              🌎 By the Creator of Java-Next Boilerplate
             </h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href="https://idee8.agency"
+                  href="https://yourdomain.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
@@ -114,7 +114,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://codementor.idee8.agency"
+                  href="https://yourdomain.com"
                   className="text-zinc-400 hover:text-white"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -124,7 +124,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://reactai.idee8.agency"
+                  href="https://yourdomain.com"
                   className="text-zinc-400 hover:text-white"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -137,14 +137,14 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 border-t border-zinc-800 pt-8 text-center text-sm text-zinc-500">
-          © 2025 ShipFree. All Rights Reserved. Cooked for you by{" "}
+          © 2025 Java-Next Boilerplate. All Rights Reserved. Cooked for you by{" "}
           <a
-            href="https://idee8.agency"
+            href="https://yourdomain.com"
             target="_blank"
             rel="noopener noreferrer"
             className="text-zinc-400 hover:text-white"
           >
-            idee8.agency
+            yourdomain.com
           </a>
           .
         </div>

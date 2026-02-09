@@ -25,16 +25,16 @@ export default function MakerIntro() {
                 href="#"
                 className="text-white hover:text-gray-200 underline underline-offset-2"
               >
-                ShipFree
+                Java-Next Boilerplate
               </a>{" "}
-              at <strong>idee8</strong> to remove those roadblocks and help
+              at <strong>Your Company</strong> to remove those roadblocks and help
               founders launch faster—**for free**.
             </p>
           </div>
         </div>
 
         <div className="space-y-6">
-          <p className="text-base">We created ShipFree for 3 reasons:</p>
+          <p className="text-base">We created Java-Next Boilerplate for 3 reasons:</p>
 
           <ol className="space-y-4 list-decimal list-inside">
             <li className="text-base">
@@ -54,7 +54,7 @@ export default function MakerIntro() {
           </ol>
 
           <p className="text-base">
-            Thousands of founders have used ShipFree to{" "}
+            Thousands of founders have used Java-Next Boilerplate to{" "}
             <a
               href="#"
               className="text-white hover:text-gray-200 underline underline-offset-2"

@@ -10,20 +10,22 @@ const bricolageGrotesque = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "ShipFree",
+  title: "Java-Next Boilerplate",
   description:
-    "Open Source Alternative to ShipFast - Launch your startup in days Not in weeks",
+    "Open-source full-stack SaaS boilerplate with Spring Boot 3, Next.js 16, Supabase Auth, Stripe payments, and production-ready features. Launch your startup fast.",
   keywords: [
+    "java",
+    "spring boot",
+    "next.js",
     "saas",
     "boilerplate",
     "open source",
-    "free",
-    "open source shipfast",
-    "shipfree",
-    "idee8",
-    "made by idee8",
-    "free boilerplate",
-    "github",
+    "supabase",
+    "stripe",
+    "full-stack",
+    "typescript",
+    "react",
+    "postgresql",
   ],
 };
 

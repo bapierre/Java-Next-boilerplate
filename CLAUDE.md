@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MarketiStats is a full-stack SaaS application with **separated frontend and backend**:
+Java-Next Boilerplate is a full-stack SaaS application with **separated frontend and backend**:
 - **Frontend**: Next.js 16 (TypeScript) in `frontend/` directory
 - **Backend**: Spring Boot 3.2.2 (Java 21) in `backend/` directory
 - **Authentication**: Supabase JWT (validated by backend, issued by frontend)
@@ -94,9 +94,9 @@ await apiClient.post('/api/stripe/checkout', { priceId });
 
 **Controller → Service → Repository** architecture:
 
-- **Controllers** (`backend/src/main/java/com/marketistats/controller/`): Handle HTTP, validate input, return DTOs
-- **Services** (`backend/src/main/java/com/marketistats/service/`): Business logic, orchestration
-- **Repositories** (`backend/src/main/java/com/marketistats/repository/`): Database access (Spring Data JPA)
+- **Controllers** (`backend/src/main/java/com/javanextboilerplate/controller/`): Handle HTTP, validate input, return DTOs
+- **Services** (`backend/src/main/java/com/javanextboilerplate/service/`): Business logic, orchestration
+- **Repositories** (`backend/src/main/java/com/javanextboilerplate/repository/`): Database access (Spring Data JPA)
 
 **Example**: Stripe checkout flow:
 1. `StripeController.createCheckoutSession()` receives request
@@ -143,7 +143,7 @@ FRONTEND_URL=http://localhost:3000
 ## Key Files & Responsibilities
 
 ### Backend Entry Points
-- `MarketiStatsApplication.java` - Spring Boot main class
+- `JavaNextBoilerplateApplication.java` - Spring Boot main class
 - `SecurityConfig.java` - Security configuration (JWT filter, CORS, public endpoints)
 - `SupabaseJwtAuthenticationFilter.java` - Extracts & validates JWT from cookies
 
@@ -153,23 +153,23 @@ FRONTEND_URL=http://localhost:3000
 
 ### Database
 - `backend/src/main/resources/db/migration/V1__initial_schema.sql` - Initial schema
-- `backend/src/main/java/com/marketistats/entity/User.java` - User entity (Supabase + Stripe IDs)
-- `backend/src/main/java/com/marketistats/entity/Subscription.java` - Subscription tracking
+- `backend/src/main/java/com/javanextboilerplate/entity/User.java` - User entity (Supabase + Stripe IDs)
+- `backend/src/main/java/com/javanextboilerplate/entity/Subscription.java` - Subscription tracking
 
 ## Common Tasks
 
 ### Adding a New Backend Endpoint
 
-1. Create DTO in `backend/src/main/java/com/marketistats/dto/request/` or `response/`
-2. Add business logic in `backend/src/main/java/com/marketistats/service/`
-3. Create controller method in `backend/src/main/java/com/marketistats/controller/`
+1. Create DTO in `backend/src/main/java/com/javanextboilerplate/dto/request/` or `response/`
+2. Add business logic in `backend/src/main/java/com/javanextboilerplate/service/`
+3. Create controller method in `backend/src/main/java/com/javanextboilerplate/controller/`
 4. If protected: Use `@AuthenticationPrincipal SupabaseUserDetails` to get user
 5. Update frontend `api-client.ts` to call new endpoint
 
 ### Adding a Database Column
 
 1. Create new migration: `backend/src/main/resources/db/migration/V<next>__<description>.sql`
-2. Add column to JPA entity in `backend/src/main/java/com/marketistats/entity/`
+2. Add column to JPA entity in `backend/src/main/java/com/javanextboilerplate/entity/`
 3. Restart backend to apply migration
 
 ### Testing Stripe Webhooks Locally

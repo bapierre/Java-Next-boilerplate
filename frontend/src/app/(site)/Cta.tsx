@@ -3,14 +3,13 @@ export default function CTA() {
     <section className="relative bg-[#0F0F0F] px-4 py-24 md:py-32">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="mb-4 text-4xl font-medium tracking-tight text-white md:text-5xl lg:text-6xl">
-          Boost your app, launch, earn
+          Ready to Build Your SaaS?
         </h2>
         <p className="mb-8 text-lg text-zinc-400 md:text-xl">
-          Don&apos;t waste time on Stripe subscriptions or designing a pricing
-          section...
+          Clone the repo, configure your services, and start building. Everything you need is already set up.
         </p>
         <a
-          href="https://github.com/idee8/shipfree"
+          href="https://github.com/bapierre/Java-Next-boilerplate"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-lg bg-[#FFB800] px-6 py-3 text-base font-medium text-black transition-colors hover:bg-[#FFB800]/90"
@@ -29,7 +28,7 @@ export default function CTA() {
               strokeLinejoin="round"
             />
           </svg>
-          Get ShipFree
+          Get Java-Next Boilerplate
         </a>
       </div>
     </section>

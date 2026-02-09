@@ -25,4 +25,7 @@ docker/volumes/
 tmp/
 temp/
 
+# Development script PIDs
+.dev.pids
+
 # Note: frontend/ and backend/ have their own .gitignore files

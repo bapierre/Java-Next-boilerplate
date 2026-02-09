@@ -4,14 +4,14 @@ import FAQ from "@/app/(site)/Faq";
 import FeaturedTime from "@/app/(site)/FeaturedTime";
 import Footer from "@/app/(site)/Footer";
 import HeroSection from "@/app/(site)/Hero";
-import MakerIntro from "@/app/(site)/MakerIntro";
 import Navbar from "@/app/(site)/Navbar";
 import PricingSection from "@/app/(site)/pricing";
-import TestimonialsPage from "@/app/(site)/Testimonials";
+import FeaturesSection from "@/app/(site)/Features";
+import TechStack from "@/app/(site)/TechStack";
 
-// required by Nextra
+// Metadata for the homepage
 export const metadata: Metadata = {
-  title: "ShipFree",
+  title: "Java-Next Boilerplate - Open Source Full-Stack SaaS Starter",
 };
 
 export default function Home() {
@@ -20,10 +20,10 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <FeaturedTime />
-      <MakerIntro />
+      <FeaturesSection />
+      <TechStack />
       <PricingSection />
       <FAQ />
-      <TestimonialsPage />
       <CTA />
       <Footer />
     </div>

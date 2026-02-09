@@ -3,7 +3,7 @@ import { Zap } from "lucide-react";
 import { getGitHubStars } from "@/utils/github";
 import MobileMenu from "./MobileMenu";
 
-const repo = "idee8/shipfree";
+const repo = "bapierre/Java-Next-boilerplate";
 
 export default async function Navbar() {
   const stars = await getGitHubStars(repo);
@@ -26,11 +26,17 @@ export default async function Navbar() {
               stroke="black"
               strokeWidth={1.4}
             />
-            <span className="text-lg font-semibold text-white">ShipFree</span>
+            <span className="text-lg font-semibold text-white">Java-Next</span>
           </Link>
         </div>
 
         <div className="hidden items-center gap-8 md:flex">
+          <Link
+            href="#features"
+            className="text-base text-white/90 transition hover:text-white"
+          >
+            Features
+          </Link>
           <Link
             href="#pricing"
             className="text-base text-white/90 transition hover:text-white"
@@ -42,12 +48,6 @@ export default async function Navbar() {
             className="text-base text-white/90 transition hover:text-white"
           >
             FAQ
-          </Link>
-          <Link
-            href="#wall-of-love"
-            className="text-base text-white/90 transition hover:text-white"
-          >
-            Wall of love
           </Link>
         </div>
 
