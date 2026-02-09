@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Java-Next Boilerplate is a full-stack SaaS application with **separated frontend and backend**:
+**MarketiStats** ([marketistats.com](https://marketistats.com)) is a full-stack SaaS application with **separated frontend and backend**:
 - **Frontend**: Next.js 16 (TypeScript) in `frontend/` directory
 - **Backend**: Spring Boot 3.2.2 (Java 21) in `backend/` directory
-- **Authentication**: Supabase JWT (validated by backend, issued by frontend)
+- **Authentication**: Supabase JWT with Google OAuth (validated by backend, issued by frontend)
 - **Database**: PostgreSQL (Supabase) with Flyway migrations
 - **Payments**: Stripe only (LemonSqueezy removed)
 
