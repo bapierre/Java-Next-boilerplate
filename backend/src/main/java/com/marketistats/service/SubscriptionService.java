@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -41,9 +41,9 @@ public class SubscriptionService {
                 .productId(productId)
                 .status(status)
                 .currentPeriodStart(currentPeriodStart != null ?
-                        LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodStart), ZoneId.systemDefault()) : null)
+                        LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodStart), ZoneOffset.UTC) : null)
                 .currentPeriodEnd(currentPeriodEnd != null ?
-                        LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodEnd), ZoneId.systemDefault()) : null)
+                        LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodEnd), ZoneOffset.UTC) : null)
                 .cancelAtPeriodEnd(false)
                 .build();
 
@@ -66,11 +66,11 @@ public class SubscriptionService {
         subscription.setStatus(status);
         if (currentPeriodStart != null) {
             subscription.setCurrentPeriodStart(
-                    LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodStart), ZoneId.systemDefault()));
+                    LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodStart), ZoneOffset.UTC));
         }
         if (currentPeriodEnd != null) {
             subscription.setCurrentPeriodEnd(
-                    LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodEnd), ZoneId.systemDefault()));
+                    LocalDateTime.ofInstant(Instant.ofEpochSecond(currentPeriodEnd), ZoneOffset.UTC));
         }
         if (cancelAtPeriodEnd != null) {
             subscription.setCancelAtPeriodEnd(cancelAtPeriodEnd);

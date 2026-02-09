@@ -98,7 +98,7 @@ public class StripeWebhookController {
                 .getObject()
                 .orElseThrow(() -> new RuntimeException("Failed to deserialize subscription"));
 
-        if (subscriptionService.subscriptionExists(subscription.getId())) {
+        try {
             subscriptionService.updateSubscription(
                     subscription.getId(),
                     subscription.getStatus(),
@@ -107,7 +107,7 @@ public class StripeWebhookController {
                     subscription.getCancelAtPeriodEnd()
             );
             log.info("Subscription updated: {}", subscription.getId());
-        } else {
+        } catch (RuntimeException e) {
             log.warn("Received update for non-existent subscription: {}", subscription.getId());
         }
     }

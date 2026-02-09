@@ -1,10 +1,8 @@
 package com.marketistats.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -12,10 +10,13 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "subscriptions")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "user")
+@EqualsAndHashCode(exclude = "user")
 public class Subscription {
 
     @Id
@@ -50,6 +51,7 @@ public class Subscription {
     @Column(name = "current_period_end")
     private LocalDateTime currentPeriodEnd;
 
+    @Builder.Default
     @Column(name = "cancel_at_period_end")
     private Boolean cancelAtPeriodEnd = false;
 

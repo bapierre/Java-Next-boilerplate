@@ -42,6 +42,7 @@ export default function Footer() {
                 <a
                   href="https://x.com/idee8agency"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
                 >
                   Twitter
@@ -51,6 +52,7 @@ export default function Footer() {
                 <a
                   href="https://github.com/idee8/shipfree"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
                 >
                   Github
@@ -60,6 +62,7 @@ export default function Footer() {
                 <a
                   href="https://shipfree.idee8.agency/docs"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
                 >
                   Documentation
@@ -77,28 +80,17 @@ export default function Footer() {
               <li>
                 <a
                   href="/tos"
-                  target="_blank"
                   className="text-zinc-400 hover:text-white"
                 >
-                  Terms of Servise
+                  Terms of Service
                 </a>
               </li>
               <li>
                 <a
-                  href="/privacy"
-                  target="_blank"
+                  href="/privacy-policy"
                   className="text-zinc-400 hover:text-white"
                 >
                   Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/licenses"
-                  target="_blank"
-                  className="text-zinc-400 hover:text-white"
-                >
-                  Licenses
                 </a>
               </li>
             </ul>
@@ -110,11 +102,11 @@ export default function Footer() {
               🌎 By the Creator of ShipFree
             </h3>
             <ul className="space-y-3 text-sm">
-              {/* {["idee8.agency", "React AI", "Code Mentor"].map((item) => ( */}
               <li>
                 <a
                   href="https://idee8.agency"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-white"
                 >
                   Idee8
@@ -125,6 +117,7 @@ export default function Footer() {
                   href="https://codementor.idee8.agency"
                   className="text-zinc-400 hover:text-white"
                   target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Code Mentor
                 </a>
@@ -134,34 +127,12 @@ export default function Footer() {
                   href="https://reactai.idee8.agency"
                   className="text-zinc-400 hover:text-white"
                   target="_blank"
+                  rel="noopener noreferrer"
                 >
                   React AI
                 </a>
               </li>
             </ul>
-
-            {/* Newsletter Section */}
-            <div className="mt-6">
-              <h4 className="mb-3 text-sm font-semibold text-zinc-400">
-                📩 Newsletter for Makers
-              </h4>
-              <p className="mb-4 text-sm text-zinc-500">
-                Get startup tips & resources every week!
-              </p>
-              <form className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 rounded-lg bg-zinc-800/50 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none ring-zinc-700 transition-shadow focus:ring-2"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-zinc-200"
-                >
-                  Subscribe
-                </button>
-              </form>
-            </div>
           </div>
         </div>
 
@@ -169,6 +140,8 @@ export default function Footer() {
           © 2025 ShipFree. All Rights Reserved. Cooked for you by{" "}
           <a
             href="https://idee8.agency"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-zinc-400 hover:text-white"
           >
             idee8.agency
