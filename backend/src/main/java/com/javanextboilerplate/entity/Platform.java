@@ -5,7 +5,6 @@ public enum Platform {
     INSTAGRAM("instagram"),
     YOUTUBE("youtube"),
     TWITTER("twitter"),
-    LINKEDIN("linkedin"),
     FACEBOOK("facebook");
 
     private final String value;

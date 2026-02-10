@@ -42,6 +42,11 @@ public class SaasProject {
     @Column(length = 100)
     private String category;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50, nullable = false)
+    @Builder.Default
+    private ProjectType type = ProjectType.PRODUCT;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

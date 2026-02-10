@@ -21,6 +21,7 @@ public class ProjectResponse {
     private String websiteUrl;
     private String imageUrl;
     private String category;
+    private String type;
     private List<ChannelResponse> channels;
     private LocalDateTime createdAt;
 
@@ -32,6 +33,7 @@ public class ProjectResponse {
                 .websiteUrl(project.getWebsiteUrl())
                 .imageUrl(project.getImageUrl())
                 .category(project.getCategory())
+                .type(project.getType().getValue())
                 .channels(project.getChannels().stream()
                         .map(ChannelResponse::from)
                         .toList())

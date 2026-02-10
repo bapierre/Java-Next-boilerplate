@@ -1,5 +1,7 @@
 package com.javanextboilerplate.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.javanextboilerplate.entity.Channel;
 import com.javanextboilerplate.entity.Platform;
 import com.javanextboilerplate.entity.SaasProject;
@@ -14,10 +16,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.URI;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +38,7 @@ public class ChannelOAuthService {
     private final SaasProjectRepository projectRepository;
     private final ChannelRepository channelRepository;
     private final UserService userService;
+    private final ObjectMapper objectMapper;
 
     @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
@@ -46,8 +58,6 @@ public class ChannelOAuthService {
     private String youtubeClientId;
     @Value("${TWITTER_CLIENT_ID:}")
     private String twitterClientId;
-    @Value("${LINKEDIN_CLIENT_ID:}")
-    private String linkedinClientId;
     @Value("${FACEBOOK_CLIENT_ID:}")
     private String facebookClientId;
 
@@ -60,8 +70,6 @@ public class ChannelOAuthService {
     private String youtubeClientSecret;
     @Value("${TWITTER_CLIENT_SECRET:}")
     private String twitterClientSecret;
-    @Value("${LINKEDIN_CLIENT_SECRET:}")
-    private String linkedinClientSecret;
     @Value("${FACEBOOK_CLIENT_SECRET:}")
     private String facebookClientSecret;
 
@@ -70,23 +78,29 @@ public class ChannelOAuthService {
             Platform.INSTAGRAM, "https://www.facebook.com/v21.0/dialog/oauth",
             Platform.YOUTUBE, "https://accounts.google.com/o/oauth2/v2/auth",
             Platform.TWITTER, "https://twitter.com/i/oauth2/authorize",
-            Platform.LINKEDIN, "https://www.linkedin.com/oauth/v2/authorization",
             Platform.FACEBOOK, "https://www.facebook.com/v21.0/dialog/oauth"
     );
 
     private static final Map<Platform, String> SCOPES = Map.of(
-            Platform.TIKTOK, "user.info.basic,video.list",
+            Platform.TIKTOK, "user.info.basic,user.info.stats,video.list",
             Platform.INSTAGRAM, "instagram_basic,instagram_manage_insights,pages_show_list",
             Platform.YOUTUBE, "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly",
             Platform.TWITTER, "tweet.read users.read offline.access",
-            Platform.LINKEDIN, "r_liteprofile r_organization_social openid",
             Platform.FACEBOOK, "pages_show_list,pages_read_engagement,read_insights"
     );
+
+    // PKCE: store code_verifier keyed by state (short-lived, in-memory is fine)
+    private final ConcurrentHashMap<String, String> pkceVerifiers = new ConcurrentHashMap<>();
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    // ─── Authorization URL ───
 
     public String getAuthorizationUrl(Platform platform, Long projectId, String supabaseUserId) {
         User user = userService.getUserBySupabaseId(supabaseUserId);
 
-        // Verify project belongs to user
         projectRepository.findByIdAndUserId(projectId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
@@ -101,20 +115,41 @@ public class ChannelOAuthService {
         String scope = SCOPES.get(platform);
         String authUrl = AUTH_URLS.get(platform);
 
+        // Generate PKCE code_verifier & code_challenge
+        String codeVerifier = generateCodeVerifier();
+        String codeChallenge = computeCodeChallenge(codeVerifier);
+        pkceVerifiers.put(state, codeVerifier);
+
         StringBuilder url = new StringBuilder(authUrl);
-        url.append("?client_id=").append(encode(clientId));
+
+        if (platform == Platform.TIKTOK) {
+            // TikTok uses client_key, not client_id
+            url.append("?client_key=").append(encode(clientId));
+        } else {
+            url.append("?client_id=").append(encode(clientId));
+        }
+
         url.append("&redirect_uri=").append(encode(redirectUri));
         url.append("&response_type=code");
         url.append("&scope=").append(encode(scope));
         url.append("&state=").append(encode(state));
 
-        // Platform-specific params
-        if (platform == Platform.TWITTER) {
-            url.append("&code_challenge=challenge&code_challenge_method=plain");
+        // PKCE for platforms that require/support it
+        if (platform == Platform.TIKTOK || platform == Platform.TWITTER) {
+            url.append("&code_challenge=").append(encode(codeChallenge));
+            url.append("&code_challenge_method=S256");
+        }
+
+        // YouTube/Google needs access_type=offline for refresh tokens
+        if (platform == Platform.YOUTUBE) {
+            url.append("&access_type=offline");
+            url.append("&prompt=consent");
         }
 
         return url.toString();
     }
+
+    // ─── OAuth Callback: exchange code for tokens + fetch user info ───
 
     @Transactional
     public Long handleCallback(Platform platform, String code, String state) {
@@ -125,24 +160,401 @@ public class ChannelOAuthService {
         SaasProject project = projectRepository.findByIdAndUserId(projectId, userId)
                 .orElseThrow(() -> new RuntimeException("Invalid state: project not found"));
 
-        // TODO: Exchange authorization code for access/refresh tokens via platform API
-        // For now, create the channel with a placeholder to be completed when
-        // platform API integration is implemented
+        String codeVerifier = pkceVerifiers.remove(state);
+
+        // Exchange authorization code for tokens
+        TokenResponse tokens = exchangeCodeForTokens(platform, code, codeVerifier);
+
+        // Fetch user/channel info from the platform
+        PlatformUserInfo userInfo = fetchUserInfo(platform, tokens.accessToken);
+
+        // Use platform user ID from token response if user info API didn't return one
+        String channelId = !"unknown".equals(userInfo.platformUserId) ? userInfo.platformUserId
+                : (tokens.platformUserId != null ? tokens.platformUserId : "unknown");
 
         Channel channel = Channel.builder()
                 .project(project)
                 .platform(platform)
-                .channelName("Pending setup")
-                .channelId(code) // Temporary — will be replaced with real channel ID after token exchange
-                .isActive(false) // Not active until token exchange is complete
+                .channelName(userInfo.displayName)
+                .channelId(channelId)
+                .channelUrl(userInfo.profileUrl)
+                .accessToken(tokens.accessToken)
+                .refreshToken(tokens.refreshToken)
+                .tokenExpiresAt(tokens.expiresAt)
+                .followerCount(userInfo.followerCount)
+                .isActive(true)
                 .build();
 
         channelRepository.save(channel);
-        log.info("OAuth callback received for {} on project {} — channel created (pending token exchange)",
-                platform.getValue(), projectId);
+        log.info("OAuth completed for {} — connected '{}' on project {}",
+                platform.getValue(), userInfo.displayName, projectId);
 
         return projectId;
     }
+
+    // ─── Token Exchange ───
+
+    private TokenResponse exchangeCodeForTokens(Platform platform, String code, String codeVerifier) {
+        String redirectUri = backendUrl + "/api/channels/oauth/" + platform.getValue() + "/callback";
+
+        try {
+            return switch (platform) {
+                case TIKTOK -> exchangeTikTokToken(code, codeVerifier, redirectUri);
+                case TWITTER -> exchangeTwitterToken(code, codeVerifier, redirectUri);
+                case YOUTUBE -> exchangeGoogleToken(code, redirectUri);
+                case INSTAGRAM -> exchangeInstagramToken(code, redirectUri);
+                case FACEBOOK -> exchangeFacebookToken(code, redirectUri);
+            };
+        } catch (Exception e) {
+            log.error("Token exchange failed for {}: {}", platform.getValue(), e.getMessage(), e);
+            throw new RuntimeException("Failed to exchange authorization code for " + platform.getValue(), e);
+        }
+    }
+
+    private TokenResponse exchangeTikTokToken(String code, String codeVerifier, String redirectUri) throws Exception {
+        String body = "client_key=" + encode(tiktokClientId)
+                + "&client_secret=" + encode(tiktokClientSecret)
+                + "&code=" + encode(code)
+                + "&grant_type=authorization_code"
+                + "&redirect_uri=" + encode(redirectUri)
+                + "&code_verifier=" + encode(codeVerifier);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://open.tiktokapis.com/v2/oauth/token/"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String accessToken = json.path("access_token").asText();
+        String refreshToken = json.path("refresh_token").asText();
+        String openId = json.path("open_id").asText();
+        long expiresIn = json.path("expires_in").asLong(86400);
+
+        if (accessToken.isEmpty()) {
+            throw new RuntimeException("TikTok token exchange failed: " + response.body());
+        }
+
+        return new TokenResponse(accessToken, refreshToken, LocalDateTime.now().plusSeconds(expiresIn), openId);
+    }
+
+    private TokenResponse exchangeTwitterToken(String code, String codeVerifier, String redirectUri) throws Exception {
+        String body = "code=" + encode(code)
+                + "&grant_type=authorization_code"
+                + "&redirect_uri=" + encode(redirectUri)
+                + "&code_verifier=" + encode(codeVerifier != null ? codeVerifier : "challenge")
+                + "&client_id=" + encode(twitterClientId);
+
+        // Twitter requires Basic auth: base64(client_id:client_secret)
+        String credentials = Base64.getEncoder().encodeToString(
+                (twitterClientId + ":" + twitterClientSecret).getBytes(StandardCharsets.UTF_8));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.twitter.com/2/oauth2/token"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Authorization", "Basic " + credentials)
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String accessToken = json.path("access_token").asText();
+        String refreshToken = json.path("refresh_token").asText();
+        long expiresIn = json.path("expires_in").asLong(7200);
+
+        if (accessToken.isEmpty()) {
+            throw new RuntimeException("Twitter token exchange failed: " + response.body());
+        }
+
+        return new TokenResponse(accessToken, refreshToken, LocalDateTime.now().plusSeconds(expiresIn), null);
+    }
+
+    private TokenResponse exchangeGoogleToken(String code, String redirectUri) throws Exception {
+        String body = "code=" + encode(code)
+                + "&client_id=" + encode(youtubeClientId)
+                + "&client_secret=" + encode(youtubeClientSecret)
+                + "&redirect_uri=" + encode(redirectUri)
+                + "&grant_type=authorization_code";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://oauth2.googleapis.com/token"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String accessToken = json.path("access_token").asText();
+        String refreshToken = json.path("refresh_token").asText();
+        long expiresIn = json.path("expires_in").asLong(3600);
+
+        if (accessToken.isEmpty()) {
+            throw new RuntimeException("Google token exchange failed: " + response.body());
+        }
+
+        return new TokenResponse(accessToken, refreshToken, LocalDateTime.now().plusSeconds(expiresIn), null);
+    }
+
+    private TokenResponse exchangeInstagramToken(String code, String redirectUri) throws Exception {
+        String body = "client_id=" + encode(instagramClientId)
+                + "&client_secret=" + encode(instagramClientSecret)
+                + "&grant_type=authorization_code"
+                + "&redirect_uri=" + encode(redirectUri)
+                + "&code=" + encode(code);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.instagram.com/oauth/access_token"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String accessToken = json.path("access_token").asText();
+        // Instagram short-lived tokens don't have refresh_token — exchange for long-lived
+        if (!accessToken.isEmpty()) {
+            return exchangeInstagramLongLivedToken(accessToken);
+        }
+
+        throw new RuntimeException("Instagram token exchange failed: " + response.body());
+    }
+
+    private TokenResponse exchangeInstagramLongLivedToken(String shortLivedToken) throws Exception {
+        String url = "https://graph.instagram.com/access_token"
+                + "?grant_type=ig_exchange_token"
+                + "&client_secret=" + encode(instagramClientSecret)
+                + "&access_token=" + encode(shortLivedToken);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String accessToken = json.path("access_token").asText();
+        long expiresIn = json.path("expires_in").asLong(5184000); // ~60 days
+
+        return new TokenResponse(accessToken, null, LocalDateTime.now().plusSeconds(expiresIn), null);
+    }
+
+    private TokenResponse exchangeFacebookToken(String code, String redirectUri) throws Exception {
+        String url = "https://graph.facebook.com/v21.0/oauth/access_token"
+                + "?client_id=" + encode(facebookClientId)
+                + "&redirect_uri=" + encode(redirectUri)
+                + "&client_secret=" + encode(facebookClientSecret)
+                + "&code=" + encode(code);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String accessToken = json.path("access_token").asText();
+        long expiresIn = json.path("expires_in").asLong(5184000);
+
+        if (accessToken.isEmpty()) {
+            throw new RuntimeException("Facebook token exchange failed: " + response.body());
+        }
+
+        return new TokenResponse(accessToken, null, LocalDateTime.now().plusSeconds(expiresIn), null);
+    }
+
+    // ─── Fetch User Info ───
+
+    private PlatformUserInfo fetchUserInfo(Platform platform, String accessToken) {
+        try {
+            return switch (platform) {
+                case TIKTOK -> fetchTikTokUser(accessToken);
+                case TWITTER -> fetchTwitterUser(accessToken);
+                case YOUTUBE -> fetchYouTubeUser(accessToken);
+                case INSTAGRAM -> fetchInstagramUser(accessToken);
+                case FACEBOOK -> fetchFacebookUser(accessToken);
+            };
+        } catch (Exception e) {
+            log.warn("Failed to fetch user info for {}, using fallback: {}", platform.getValue(), e.getMessage());
+            return new PlatformUserInfo("Unknown", "unknown", null, null);
+        }
+    }
+
+    private PlatformUserInfo fetchTikTokUser(String accessToken) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://open.tiktokapis.com/v2/user/info/?fields=open_id,username,display_name,avatar_url,follower_count"))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        log.info("TikTok user info response [status={}]: {}", response.statusCode(), response.body());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        // Check for API errors
+        JsonNode error = json.path("error");
+        if (error.has("code") && !"ok".equals(error.path("code").asText())) {
+            log.warn("TikTok API error: code={}, message={}", error.path("code").asText(), error.path("message").asText());
+        }
+
+        JsonNode data = json.path("data").path("user");
+
+        String displayName = data.path("display_name").asText("");
+        String username = data.path("username").asText("");
+        String openId = data.path("open_id").asText("unknown");
+        long followers = data.path("follower_count").asLong(0);
+
+        log.info("TikTok user parsed: displayName='{}', username='{}', openId='{}', followers={}", displayName, username, openId, followers);
+
+        // Prefer display_name, fall back to username
+        String name = !displayName.isEmpty() ? displayName : (!username.isEmpty() ? "@" + username : "TikTok User");
+        String handle = !username.isEmpty() ? username : displayName;
+
+        return new PlatformUserInfo(name, openId, "https://www.tiktok.com/@" + handle, followers > 0 ? followers : null);
+    }
+
+    private PlatformUserInfo fetchTwitterUser(String accessToken) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.twitter.com/2/users/me?user.fields=public_metrics,profile_image_url"))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+        JsonNode data = json.path("data");
+
+        String username = data.path("username").asText(data.path("name").asText("Twitter User"));
+        String id = data.path("id").asText("unknown");
+
+        long followers = data.path("public_metrics").path("followers_count").asLong(0);
+        return new PlatformUserInfo("@" + username, id, "https://x.com/" + username, followers > 0 ? followers : null);
+    }
+
+    private PlatformUserInfo fetchYouTubeUser(String accessToken) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true"))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+        JsonNode items = json.path("items");
+
+        if (items.isArray() && !items.isEmpty()) {
+            JsonNode channel = items.get(0);
+            String title = channel.path("snippet").path("title").asText("YouTube Channel");
+            String channelId = channel.path("id").asText("unknown");
+            String customUrl = channel.path("snippet").path("customUrl").asText("");
+            String profileUrl = customUrl.isEmpty()
+                    ? "https://www.youtube.com/channel/" + channelId
+                    : "https://www.youtube.com/" + customUrl;
+            long subscribers = channel.path("statistics").path("subscriberCount").asLong(0);
+            return new PlatformUserInfo(title, channelId, profileUrl, subscribers > 0 ? subscribers : null);
+        }
+
+        return new PlatformUserInfo("YouTube Channel", "unknown", null, null);
+    }
+
+    private PlatformUserInfo fetchInstagramUser(String accessToken) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://graph.instagram.com/me?fields=id,username&access_token=" + encode(accessToken)))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String username = json.path("username").asText("Instagram User");
+        String id = json.path("id").asText("unknown");
+
+        return new PlatformUserInfo("@" + username, id, "https://www.instagram.com/" + username, null);
+    }
+
+    private PlatformUserInfo fetchFacebookUser(String accessToken) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://graph.facebook.com/v21.0/me?fields=id,name&access_token=" + encode(accessToken)))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+
+        String name = json.path("name").asText("Facebook User");
+        String id = json.path("id").asText("unknown");
+
+        return new PlatformUserInfo(name, id, "https://www.facebook.com/" + id, null);
+    }
+
+    // ─── Token Revocation (called on disconnect) ───
+
+    public void revokeToken(Channel channel) {
+        if (channel.getAccessToken() == null || channel.getAccessToken().isBlank()) return;
+
+        try {
+            switch (channel.getPlatform()) {
+                case TIKTOK -> revokeTikTokToken(channel.getAccessToken());
+                case TWITTER -> revokeTwitterToken(channel.getAccessToken());
+                // Google, Instagram, Facebook — no simple revoke endpoint needed for MVP
+                default -> log.debug("No revoke endpoint for {}", channel.getPlatform().getValue());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to revoke {} token (non-fatal): {}", channel.getPlatform().getValue(), e.getMessage());
+        }
+    }
+
+    private void revokeTikTokToken(String accessToken) throws Exception {
+        String body = "client_key=" + encode(tiktokClientId)
+                + "&access_token=" + encode(accessToken);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://open.tiktokapis.com/v2/oauth/revoke/"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(10))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        log.info("TikTok token revoked [status={}]", response.statusCode());
+    }
+
+    private void revokeTwitterToken(String accessToken) throws Exception {
+        String credentials = Base64.getEncoder().encodeToString(
+                (twitterClientId + ":" + twitterClientSecret).getBytes(StandardCharsets.UTF_8));
+
+        String body = "token=" + encode(accessToken) + "&token_type_hint=access_token";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.twitter.com/2/oauth2/revoke"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Authorization", "Basic " + credentials)
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(10))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        log.info("Twitter token revoked [status={}]", response.statusCode());
+    }
+
+    // ─── Helpers ───
 
     private String getClientId(Platform platform) {
         return switch (platform) {
@@ -150,14 +562,33 @@ public class ChannelOAuthService {
             case INSTAGRAM -> instagramClientId;
             case YOUTUBE -> youtubeClientId;
             case TWITTER -> twitterClientId;
-            case LINKEDIN -> linkedinClientId;
             case FACEBOOK -> facebookClientId;
         };
     }
 
     /**
-     * Creates a signed state parameter: base64(projectId:userId:signature)
+     * Generates a cryptographically random PKCE code_verifier (43-128 chars).
      */
+    private String generateCodeVerifier() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /**
+     * Computes code_challenge = BASE64URL(SHA256(code_verifier)).
+     */
+    private String computeCodeChallenge(String codeVerifier) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(codeVerifier.getBytes(StandardCharsets.US_ASCII));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to compute PKCE code challenge", e);
+        }
+    }
+
     String createSignedState(Long projectId, Long userId) {
         String payload = projectId + ":" + userId;
         String signature = hmacSign(payload);
@@ -165,9 +596,6 @@ public class ChannelOAuthService {
                 .encodeToString((payload + ":" + signature).getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Parses and validates a signed state parameter. Returns [projectId, userId].
-     */
     long[] parseSignedState(String state) {
         String decoded = new String(Base64.getUrlDecoder().decode(state), StandardCharsets.UTF_8);
         String[] parts = decoded.split(":");
@@ -196,4 +624,9 @@ public class ChannelOAuthService {
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
+
+    // ─── Inner DTOs ───
+
+    private record TokenResponse(String accessToken, String refreshToken, LocalDateTime expiresAt, String platformUserId) {}
+    private record PlatformUserInfo(String displayName, String platformUserId, String profileUrl, Long followerCount) {}
 }

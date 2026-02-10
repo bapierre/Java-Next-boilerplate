@@ -60,6 +60,16 @@ public class ProjectController {
         return ResponseEntity.ok(project);
     }
 
+    @DeleteMapping("/{projectId}/channels/{channelId}")
+    public ResponseEntity<Void> disconnectChannel(
+            @PathVariable Long projectId,
+            @PathVariable Long channelId,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        projectService.disconnectChannel(projectId, channelId, userDetails.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProject(
             @PathVariable Long id,

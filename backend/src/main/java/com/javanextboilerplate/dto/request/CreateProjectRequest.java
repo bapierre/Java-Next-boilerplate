@@ -25,4 +25,7 @@ public class CreateProjectRequest {
 
     @Size(max = 100, message = "Category must be 100 characters or less")
     private String category;
+
+    @Size(max = 50, message = "Type must be 50 characters or less")
+    private String type;
 }

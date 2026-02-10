@@ -1,6 +1,6 @@
 export default function MakerIntro() {
   return (
-    <div className="bg-[#212121] mb-8 text-gray-300 p-8">
+    <div className="bg-gray-50 mb-8 text-gray-600 p-8">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex flex-col md:flex-row gap-8 items-start">
           <div className="relative w-[200px] h-[200px] flex-shrink-0">
@@ -11,7 +11,7 @@ export default function MakerIntro() {
           </div>
 
           <div className="space-y-4">
-            <h1 className="text-2xl font-semibold text-white">
+            <h1 className="text-2xl font-semibold text-gray-900">
               Built for Founders, by Founders 🚀
             </h1>
             <p className="text-base">
@@ -23,7 +23,7 @@ export default function MakerIntro() {
               So we built{" "}
               <a
                 href="#"
-                className="text-white hover:text-gray-200 underline underline-offset-2"
+                className="text-gray-900 hover:text-gray-700 underline underline-offset-2"
               >
                 Java-Next Boilerplate
               </a>{" "}
@@ -38,15 +38,15 @@ export default function MakerIntro() {
 
           <ol className="space-y-4 list-decimal list-inside">
             <li className="text-base">
-              <span className="font-semibold text-white">Save time</span>—skip
+              <span className="font-semibold text-gray-900">Save time</span>—skip
               the repetitive setup and start building immediately.
             </li>
             <li className="text-base">
-              <span className="font-semibold text-white">Avoid headaches</span>
+              <span className="font-semibold text-gray-900">Avoid headaches</span>
               —no more struggling with email deliverability, payments, or auth.
             </li>
             <li className="text-base">
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-gray-900">
                 Get profitable faster
               </span>
               —the faster you ship, the quicker you validate and earn.
@@ -57,7 +57,7 @@ export default function MakerIntro() {
             Thousands of founders have used Java-Next Boilerplate to{" "}
             <a
               href="#"
-              className="text-white hover:text-gray-200 underline underline-offset-2"
+              className="text-gray-900 hover:text-gray-700 underline underline-offset-2"
             >
               launch, land clients, and generate revenue
             </a>

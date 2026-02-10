@@ -46,15 +46,15 @@ export default function TechStack() {
   ];
 
   return (
-    <div className="bg-[#212121] py-20 px-4">
+    <div className="bg-white py-20 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-[#FFBE18] font-medium mb-4">Technology Stack</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <p className="text-purple-500 font-medium mb-4">Technology Stack</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Modern, Battle-Tested Technologies
           </h2>
-          <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
             Built with industry-standard tools that scale. No experimental frameworks, just proven technologies used by thousands of companies.
           </p>
         </div>
@@ -68,11 +68,11 @@ export default function TechStack() {
               </h3>
               <div className="space-y-3">
                 {category.technologies.map((tech, techIdx) => (
-                  <div key={techIdx} className="bg-[#1C1C1C] p-4 rounded-lg border border-zinc-800">
-                    <p className="text-white font-semibold text-sm mb-1">
+                  <div key={techIdx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-gray-900 font-semibold text-sm mb-1">
                       {tech.name}
                     </p>
-                    <p className="text-zinc-500 text-xs">
+                    <p className="text-gray-500 text-xs">
                       {tech.description}
                     </p>
                   </div>
@@ -84,14 +84,14 @@ export default function TechStack() {
 
         {/* Bottom CTA */}
         <div className="mt-16 text-center">
-          <p className="text-zinc-400 mb-4">
+          <p className="text-gray-500 mb-4">
             Everything is configured and ready to use. Just clone, configure your API keys, and start building.
           </p>
           <a
             href="https://github.com/bapierre/Java-Next-boilerplate"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-[#FFBE18] hover:text-yellow-500 font-semibold transition-colors"
+            className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold transition-colors"
           >
             View Documentation →
           </a>

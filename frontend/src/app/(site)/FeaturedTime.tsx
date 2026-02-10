@@ -45,27 +45,27 @@ export default function FeaturedTime() {
   ];
 
   return (
-    <div className="bg-[#212121] text-gray-300 py-16 px-4">
+    <div className="bg-white text-gray-600 py-16 px-4">
       <div className="max-w-4xl mx-auto space-y-20">
         {/* Featured section */}
         <div className="text-center space-y-6">
-          <p className="text-gray-300 text-lg uppercase tracking-wider mb-6">
+          <p className="text-gray-600 text-lg uppercase tracking-wider mb-6">
             Featured on
           </p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
-            <div className="flex items-center gap-2 text-gray-400">
+            <div className="flex items-center gap-2 text-gray-500">
               <HackerNewsIcon className="w-6 h-6" />
               <span className="text-base">Hacker News</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
+            <div className="flex items-center gap-2 text-gray-500">
               <ProductHuntIcon className="w-6 h-6" />
               <span className="text-base">Product Hunt</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
+            <div className="flex items-center gap-2 text-gray-500">
               <TwitterIcon className="w-6 h-6" />
               <span className="text-base">Twitter</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
+            <div className="flex items-center gap-2 text-gray-500">
               <GitHubIcon className="w-6 h-6" />
               <span className="text-base">GitHub</span>
             </div>
@@ -73,24 +73,24 @@ export default function FeaturedTime() {
         </div>
 
         {/* Time breakdown section */}
-        <div className="max-w-lg mx-auto bg-[#1a1208] rounded-lg p-8 space-y-3 text-center">
+        <div className="max-w-lg mx-auto bg-purple-50 rounded-lg p-8 space-y-3 text-center">
           {timeBreakdown.map((item, index) => (
             <div
               key={index}
               className="flex justify-center items-center gap-2 text-lg"
             >
-              {index !== 0 && <span className="text-gray-500">+</span>}
-              <span className="text-red-400 font-semibold">
+              {index !== 0 && <span className="text-gray-400">+</span>}
+              <span className="text-purple-600 font-semibold">
                 {item.time} {typeof item.time === "number" && "hrs"}
               </span>
-              <span className="text-gray-400">{item.task}</span>
+              <span className="text-gray-500">{item.task}</span>
             </div>
           ))}
 
           <div className="flex justify-center items-center gap-3 pt-4 text-xl font-semibold">
-            <span className="text-gray-500">=</span>
-            <span className="text-red-400">22+ hours</span>
-            <span className="text-gray-300">of headaches</span>
+            <span className="text-gray-400">=</span>
+            <span className="text-purple-600">22+ hours</span>
+            <span className="text-gray-600">of headaches</span>
             <CloudRain className="w-6 h-6 text-gray-400" />
           </div>
         </div>

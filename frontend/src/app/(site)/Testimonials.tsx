@@ -164,14 +164,14 @@ export default function TestimonialsPage() {
   return (
     <div
       id="wall-of-love"
-      className="min-h-screen bg-[#0F0F0F] text-white py-16 px-4"
+      className="min-h-screen bg-purple-50 text-gray-900 py-16 px-4"
     >
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             1209 makers built AI tools, SaaS, and more
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-500 text-lg">
             They made their first $ online, and some even quit their 9-5!
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function TestimonialsPage() {
           {testimonials.map((testimonial, index) => (
             <Card
               key={index}
-              className="bg-zinc-900 border-[1.4px] border-zinc-800 p-6 flex flex-col"
+              className="bg-white border-[1.4px] border-gray-200 p-6 flex flex-col"
             >
               <div className="flex-grow">
                 {testimonial.rating && (
@@ -194,10 +194,10 @@ export default function TestimonialsPage() {
                   </div>
                 )}
 
-                <p className="text-gray-300 mb-6">{testimonial.text}</p>
+                <p className="text-gray-600 mb-6">{testimonial.text}</p>
               </div>
 
-              <div className="flex items-center gap-3 pt-4 border-t border-zinc-700 mt-auto">
+              <div className="flex items-center gap-3 pt-4 border-t border-gray-200 mt-auto">
                 <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
                   <Image
                     src={testimonial.avatar}
@@ -208,10 +208,10 @@ export default function TestimonialsPage() {
                   />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base text-zinc-300">
+                  <h3 className="font-semibold text-base text-gray-800">
                     {testimonial.name}
                   </h3>
-                  <p className="text-gray-400 text-sm">{testimonial.role}</p>
+                  <p className="text-gray-500 text-sm">{testimonial.role}</p>
                 </div>
               </div>
             </Card>

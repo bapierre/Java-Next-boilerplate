@@ -28,4 +28,7 @@ temp/
 # Development script PIDs
 .dev.pids
 
+# Local TLS certs (mkcert)
+*.pem
+
 # Note: frontend/ and backend/ have their own .gitignore files

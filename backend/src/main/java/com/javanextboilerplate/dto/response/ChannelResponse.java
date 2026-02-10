@@ -19,6 +19,7 @@ public class ChannelResponse {
     private String channelName;
     private String channelUrl;
     private Boolean isActive;
+    private Long followerCount;
     private LocalDateTime lastSyncedAt;
 
     public static ChannelResponse from(Channel channel) {
@@ -28,6 +29,7 @@ public class ChannelResponse {
                 .channelName(channel.getChannelName())
                 .channelUrl(channel.getChannelUrl())
                 .isActive(channel.getIsActive())
+                .followerCount(channel.getFollowerCount())
                 .lastSyncedAt(channel.getLastSyncedAt())
                 .build();
     }

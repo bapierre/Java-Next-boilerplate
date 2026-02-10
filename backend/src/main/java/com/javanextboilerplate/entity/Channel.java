@@ -52,6 +52,9 @@ public class Channel {
     @Column(name = "token_expires_at")
     private LocalDateTime tokenExpiresAt;
 
+    @Column(name = "follower_count")
+    private Long followerCount;
+
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;

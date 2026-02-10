@@ -15,18 +15,9 @@ export default function DashboardContent({ email }: { email: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-5xl mx-auto">
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-            <p className="text-zinc-400 text-sm">{email}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
-            Sign out
-          </Button>
-        </header>
-        <ProjectList />
+        <ProjectList email={email} onSignOut={handleSignOut} />
       </div>
     </div>
   );

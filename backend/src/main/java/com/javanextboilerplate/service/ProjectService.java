@@ -3,8 +3,11 @@ package com.javanextboilerplate.service;
 import com.javanextboilerplate.dto.request.CreateProjectRequest;
 import com.javanextboilerplate.dto.request.UpdateProjectRequest;
 import com.javanextboilerplate.dto.response.ProjectResponse;
+import com.javanextboilerplate.entity.Channel;
+import com.javanextboilerplate.entity.ProjectType;
 import com.javanextboilerplate.entity.SaasProject;
 import com.javanextboilerplate.entity.User;
+import com.javanextboilerplate.repository.ChannelRepository;
 import com.javanextboilerplate.repository.SaasProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +22,17 @@ import java.util.List;
 public class ProjectService {
 
     private final SaasProjectRepository projectRepository;
+    private final ChannelRepository channelRepository;
     private final UserService userService;
+    private final ChannelOAuthService channelOAuthService;
 
     @Transactional
     public ProjectResponse createProject(String supabaseUserId, String email, CreateProjectRequest request) {
         User user = userService.getOrCreateUser(supabaseUserId, email);
+
+        ProjectType projectType = request.getType() != null
+                ? ProjectType.fromValue(request.getType())
+                : ProjectType.PRODUCT;
 
         SaasProject project = SaasProject.builder()
                 .userId(user.getId())
@@ -32,6 +41,7 @@ public class ProjectService {
                 .websiteUrl(request.getWebsiteUrl())
                 .imageUrl(request.getImageUrl())
                 .category(request.getCategory())
+                .type(projectType)
                 .build();
 
         SaasProject saved = projectRepository.save(project);
@@ -76,10 +86,34 @@ public class ProjectService {
         if (request.getCategory() != null) {
             project.setCategory(request.getCategory());
         }
+        if (request.getType() != null) {
+            project.setType(ProjectType.fromValue(request.getType()));
+        }
 
         SaasProject saved = projectRepository.save(project);
         log.info("Updated project '{}' (id={})", saved.getName(), saved.getId());
         return ProjectResponse.from(saved);
+    }
+
+    @Transactional
+    public void disconnectChannel(Long projectId, Long channelId, String supabaseUserId) {
+        User user = userService.getUserBySupabaseId(supabaseUserId);
+        SaasProject project = projectRepository.findByIdAndUserId(projectId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new RuntimeException("Channel not found"));
+
+        if (!channel.getProject().getId().equals(project.getId())) {
+            throw new RuntimeException("Channel does not belong to this project");
+        }
+
+        // Revoke platform token before deleting
+        channelOAuthService.revokeToken(channel);
+
+        project.removeChannel(channel);
+        channelRepository.delete(channel);
+        log.info("Disconnected channel {} from project '{}' (id={})", channelId, project.getName(), project.getId());
     }
 
     @Transactional
