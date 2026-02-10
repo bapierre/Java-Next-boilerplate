@@ -1,6 +1,7 @@
-import AccountForm from "./account-form";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import DashboardContent from "./dashboard-content";
 
 export default async function Dashboard() {
   const cookieStore = await cookies();
@@ -10,5 +11,9 @@ export default async function Dashboard() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return <AccountForm user={user} />;
+  if (!user) {
+    redirect("/auth/login");
+  }
+
+  return <DashboardContent email={user.email ?? ""} />;
 }

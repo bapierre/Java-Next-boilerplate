@@ -1,0 +1,177 @@
+"use client";
+
+import { useState } from "react";
+import { apiClient } from "@/lib/api-client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { ProjectResponse } from "./ProjectList";
+
+const CATEGORIES = [
+  "SaaS",
+  "E-commerce",
+  "Mobile App",
+  "Content / Media",
+  "Agency",
+  "Marketplace",
+  "Developer Tools",
+  "Other",
+];
+
+interface ProjectFormProps {
+  project?: ProjectResponse;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+export default function ProjectForm({
+  project,
+  onSuccess,
+  onCancel,
+}: ProjectFormProps) {
+  const isEditing = !!project;
+  const [name, setName] = useState(project?.name ?? "");
+  const [description, setDescription] = useState(project?.description ?? "");
+  const [websiteUrl, setWebsiteUrl] = useState(project?.websiteUrl ?? "");
+  const [imageUrl, setImageUrl] = useState(project?.imageUrl ?? "");
+  const [category, setCategory] = useState(project?.category ?? "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Product name is required.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const body = {
+        name: name.trim(),
+        description: description.trim() || null,
+        websiteUrl: websiteUrl.trim() || null,
+        imageUrl: imageUrl.trim() || null,
+        category: category || null,
+      };
+
+      if (isEditing) {
+        await apiClient.put(`/api/projects/${project.id}`, body);
+      } else {
+        await apiClient.post("/api/projects", body);
+      }
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="bg-zinc-900 border-zinc-800">
+      <CardHeader>
+        <CardTitle className="text-white">
+          {isEditing ? "Edit Product" : "New Product"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name" className="text-zinc-300">
+              Name *
+            </Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="My SaaS Product"
+              className="bg-zinc-800 border-zinc-700 text-white mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description" className="text-zinc-300">
+              Description
+            </Label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of your product..."
+              rows={3}
+              className="flex w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="websiteUrl" className="text-zinc-300">
+              Website URL
+            </Label>
+            <Input
+              id="websiteUrl"
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://myproduct.com"
+              className="bg-zinc-800 border-zinc-700 text-white mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="imageUrl" className="text-zinc-300">
+              Image URL
+            </Label>
+            <Input
+              id="imageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://myproduct.com/logo.png"
+              className="bg-zinc-800 border-zinc-700 text-white mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="category" className="text-zinc-300">
+              Category
+            </Label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring mt-1"
+            >
+              <option value="">Select a category...</option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" disabled={loading}>
+              {loading
+                ? isEditing
+                  ? "Saving..."
+                  : "Creating..."
+                : isEditing
+                  ? "Save Changes"
+                  : "Create Product"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

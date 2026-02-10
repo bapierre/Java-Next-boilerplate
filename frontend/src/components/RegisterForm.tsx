@@ -1,12 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function getPasswordStrength(password: string) {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+  if (score <= 1) return { level: "Weak", color: "bg-red-500", width: "w-1/4" };
+  if (score <= 2) return { level: "Fair", color: "bg-orange-500", width: "w-2/4" };
+  if (score <= 3) return { level: "Good", color: "bg-yellow-500", width: "w-3/4" };
+  return { level: "Strong", color: "bg-green-500", width: "w-full" };
+}
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -14,8 +27,10 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
-  const router = useRouter();
+  const [sent, setSent] = useState(false);
   const supabase = createClient();
+  const [showPassword, setShowPassword] = useState(false);
+  const strength = password.length > 0 ? getPasswordStrength(password) : null;
 
   const handleGoogleSignUp = async () => {
     setError(null);
@@ -38,11 +53,17 @@ export function RegisterForm() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
       if (error) {
-        setError("Registration failed. Please try again.");
+        setError(error.message);
       } else {
-        router.push("/dashboard");
+        setSent(true);
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -50,6 +71,32 @@ export function RegisterForm() {
       setIsLoading(false);
     }
   };
+
+  if (sent) {
+    return (
+      <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-sm text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+            Check your email
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            We sent a confirmation link to <strong>{email}</strong>. Click the link to verify your account.
+          </p>
+          <button
+            onClick={() => setSent(false)}
+            className="mt-6 text-sm text-blue-500 hover:underline"
+          >
+            Use a different email
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -110,15 +157,60 @@ export function RegisterForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {strength && (
+              <div className="space-y-1.5">
+                <div className="h-1.5 w-full rounded-full bg-gray-200">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${strength.color} ${strength.width}`}
+                  />
+                </div>
+                <p className={`text-xs ${
+                  strength.level === "Weak" ? "text-red-600" :
+                  strength.level === "Fair" ? "text-orange-600" :
+                  strength.level === "Good" ? "text-yellow-600" :
+                  "text-green-600"
+                }`}>
+                  {strength.level}
+                  {strength.level === "Weak" && " — use at least 8 characters"}
+                </p>
+              </div>
+            )}
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || (strength !== null && strength.level === "Weak")}
+          >
             {isLoading ? "Creating account..." : "Register"}
           </Button>
         </form>

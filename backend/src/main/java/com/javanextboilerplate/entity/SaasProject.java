@@ -36,6 +36,12 @@ public class SaasProject {
     @Column(name = "website_url", length = 500)
     private String websiteUrl;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    @Column(length = 100)
+    private String category;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

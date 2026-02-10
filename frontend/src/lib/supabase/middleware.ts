@@ -29,6 +29,24 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // If the URL has a ?code= param (magic link / OAuth PKCE), exchange it
+  // for a session and redirect to dashboard. This handles the case where
+  // Supabase sends the user to any path (e.g. /) with a code param.
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && !request.nextUrl.pathname.startsWith("/auth/callback")) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.searchParams.delete("code");
+      const redirectResponse = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach(({ name, value }) => {
+        redirectResponse.cookies.set(name, value);
+      });
+      return redirectResponse;
+    }
+  }
+
   // Do not run code between createServerClient and
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.

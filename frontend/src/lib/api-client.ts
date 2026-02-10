@@ -61,7 +61,7 @@ export const apiClient = {
     return response.json();
   },
 
-  async delete<T = unknown>(endpoint: string): Promise<T> {
+  async delete(endpoint: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "DELETE",
       headers: {
@@ -74,8 +74,6 @@ export const apiClient = {
     if (!response.ok) {
       throw new Error(getErrorMessage(response.status));
     }
-
-    return response.json();
   },
 };
 

@@ -3,7 +3,10 @@ package com.javanextboilerplate.entity;
 public enum Platform {
     TIKTOK("tiktok"),
     INSTAGRAM("instagram"),
-    YOUTUBE("youtube");
+    YOUTUBE("youtube"),
+    TWITTER("twitter"),
+    LINKEDIN("linkedin"),
+    FACEBOOK("facebook");
 
     private final String value;
 

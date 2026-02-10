@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
-import java.security.interfaces.RSAPublicKey;
+import java.security.interfaces.ECPublicKey;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -30,7 +30,7 @@ public class SupabaseJwtValidator {
     @PostConstruct
     public void init() {
         try {
-            String jwksUrl = supabaseUrl + "/auth/v1/jwks";
+            String jwksUrl = supabaseUrl + "/auth/v1/.well-known/jwks.json";
             jwkProvider = new JwkProviderBuilder(new URL(jwksUrl))
                     .cached(10, 24, TimeUnit.HOURS)
                     .rateLimited(10, 1, TimeUnit.MINUTES)
@@ -57,8 +57,7 @@ public class SupabaseJwtValidator {
             JWTVerifier verifier = verifierCache.computeIfAbsent(keyId, kid -> {
                 try {
                     Jwk jwk = jwkProvider.get(kid);
-                    RSAPublicKey publicKey = (RSAPublicKey) jwk.getPublicKey();
-                    Algorithm algorithm = Algorithm.RSA256(publicKey, null);
+                    Algorithm algorithm = buildAlgorithm(jwk);
                     return JWT.require(algorithm)
                             .withIssuer(supabaseUrl + "/auth/v1")
                             .withAudience("authenticated")
@@ -79,6 +78,16 @@ public class SupabaseJwtValidator {
             log.error("JWT validation failed: {}", e.getMessage());
             return null;
         }
+    }
+
+    private Algorithm buildAlgorithm(Jwk jwk) throws Exception {
+        String alg = jwk.getAlgorithm();
+        if ("ES256".equals(alg)) {
+            ECPublicKey publicKey = (ECPublicKey) jwk.getPublicKey();
+            return Algorithm.ECDSA256(publicKey, null);
+        }
+        // Fallback for RSA keys (older Supabase projects)
+        return Algorithm.RSA256((java.security.interfaces.RSAPublicKey) jwk.getPublicKey(), null);
     }
 
     public String getUserId(DecodedJWT jwt) {
