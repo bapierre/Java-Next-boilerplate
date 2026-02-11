@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useRef, useState, useCallback } from "react";
 import { getPlatformInfo } from "./ChannelCatalog";
 
 interface RadarDataPoint {
   platform: string;
   label: string;
   value: number;
+  targetFraction: number;
   color: string;
 }
 
@@ -19,7 +21,6 @@ interface RadarChartProps {
   visibleChannelIds?: Set<number>;
 }
 
-// Short labels to avoid clipping in the chart
 const SHORT_LABELS: Record<string, string> = {
   twitter: "X",
 };
@@ -30,43 +31,43 @@ function formatFollowers(count: number): string {
   return count.toString();
 }
 
-export default function RadarChart({ channels, visibleChannelIds }: RadarChartProps) {
-  // Filter to visible channels if specified
-  const filteredChannels = visibleChannelIds
-    ? channels.filter((ch) => visibleChannelIds.has(ch.id))
-    : channels;
+const ANIM_DURATION = 400;
 
-  // Each connected channel gets its own axis
-  const data: RadarDataPoint[] = filteredChannels
+export default function RadarChart({ channels, visibleChannelIds }: RadarChartProps) {
+  // Build data for all channels (axes always visible)
+  const allData = channels
     .map((ch) => {
       const info = getPlatformInfo(ch.platform);
       if (!info) return null;
+      const visible = !visibleChannelIds || visibleChannelIds.has(ch.id);
       return {
         platform: ch.platform,
         label: ch.channelName || (SHORT_LABELS[ch.platform] ?? info.label),
         value: ch.followerCount ?? 0,
+        targetFraction: visible ? 1 : 0,
         color: info.color,
       };
     })
     .filter((d): d is RadarDataPoint => d !== null);
 
-  if (data.length < 3) {
+  if (allData.length < 3) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-10 h-10 text-gray-300 mb-3"
-        >
-          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" />
-          <line x1="12" y1="2" x2="12" y2="22" />
-          <line x1="22" y1="8.5" x2="2" y2="15.5" />
-          <line x1="2" y1="8.5" x2="22" y2="15.5" />
-        </svg>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-8 h-8 text-gray-300"
+          >
+            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" />
+            <line x1="12" y1="2" x2="12" y2="22" />
+            <line x1="22" y1="8.5" x2="2" y2="15.5" />
+          </svg>
+        </div>
         <p className="text-gray-400 text-sm">
           Connect at least 3 platforms to see the radar chart.
         </p>
@@ -74,18 +75,56 @@ export default function RadarChart({ channels, visibleChannelIds }: RadarChartPr
     );
   }
 
+  return <AnimatedRadar data={allData} />;
+}
+
+function AnimatedRadar({ data }: { data: RadarDataPoint[] }) {
   const N = data.length;
   const cx = 300;
   const cy = 240;
   const maxRadius = 140;
-  const labelRadius = maxRadius + 35;
+  const labelRadius = maxRadius + 40;
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const gridLevels = 4;
 
-  // Angle for each axis (start from top, go clockwise)
+  // Animated fractions (0 = collapsed to center, 1 = full value)
+  const [fractions, setFractions] = useState<number[]>(() =>
+    data.map((d) => d.targetFraction)
+  );
+  const animRef = useRef<number | null>(null);
+  const startFractionsRef = useRef<number[]>(fractions);
+  const startTimeRef = useRef<number>(0);
+
+  const targetFractions = data.map((d) => d.targetFraction);
+
+  const animate = useCallback(() => {
+    const elapsed = performance.now() - startTimeRef.current;
+    const t = Math.min(elapsed / ANIM_DURATION, 1);
+    // Ease out cubic
+    const ease = 1 - Math.pow(1 - t, 3);
+
+    const next = startFractionsRef.current.map(
+      (from, i) => from + (targetFractions[i] - from) * ease
+    );
+    setFractions(next);
+
+    if (t < 1) {
+      animRef.current = requestAnimationFrame(animate);
+    }
+  }, [targetFractions]);
+
+  useEffect(() => {
+    startFractionsRef.current = fractions;
+    startTimeRef.current = performance.now();
+    animRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetFractions.join(",")]);
+
   const angleFor = (i: number) => (i * 2 * Math.PI) / N - Math.PI / 2;
 
-  // Point on axis at given fraction (0–1) of maxRadius
   const pointAt = (i: number, fraction: number) => ({
     x: cx + maxRadius * fraction * Math.cos(angleFor(i)),
     y: cy + maxRadius * fraction * Math.sin(angleFor(i)),
@@ -94,39 +133,80 @@ export default function RadarChart({ channels, visibleChannelIds }: RadarChartPr
   // Grid polygons
   const gridPolygons = Array.from({ length: gridLevels }, (_, level) => {
     const fraction = (level + 1) / gridLevels;
-    const points = Array.from({ length: N }, (_, i) => {
+    return Array.from({ length: N }, (_, i) => {
       const p = pointAt(i, fraction);
       return `${p.x},${p.y}`;
     }).join(" ");
-    return points;
   });
 
-  // Data polygon
+  // Data polygon using animated fractions
   const dataPoints = data.map((d, i) => {
-    const fraction = maxValue > 0 ? d.value / maxValue : 0;
-    return pointAt(i, Math.max(fraction, 0.05)); // min 5% so zero isn't invisible
+    const valueFraction = maxValue > 0 ? d.value / maxValue : 0;
+    const animatedFraction = Math.max(valueFraction * fractions[i], 0.02);
+    return pointAt(i, animatedFraction);
   });
-  const dataPolygon = dataPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const dataPath =
+    "M" +
+    dataPoints.map((p) => `${p.x},${p.y}`).join("L") +
+    "Z";
 
   // Label positions
   const labels = data.map((d, i) => ({
     ...d,
     x: cx + labelRadius * Math.cos(angleFor(i)),
     y: cy + labelRadius * Math.sin(angleFor(i)),
+    dimmed: fractions[i] < 0.5,
   }));
+
+  // Grid level labels
+  const gridLabels = Array.from({ length: gridLevels }, (_, level) => {
+    const fraction = (level + 1) / gridLevels;
+    return {
+      value: Math.round(maxValue * fraction),
+      y: cy - maxRadius * fraction,
+    };
+  });
 
   return (
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 600 480" className="w-full max-w-xl mx-auto">
+        <defs>
+          <radialGradient id="radar-fill" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgb(147, 51, 234)" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="rgb(147, 51, 234)" stopOpacity="0.05" />
+          </radialGradient>
+          <filter id="radar-glow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
         {/* Grid */}
         {gridPolygons.map((points, level) => (
           <polygon
             key={level}
             points={points}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={level === gridLevels - 1 ? 1.5 : 0.75}
+            fill={level === 0 ? "rgba(249,250,251,0.5)" : "none"}
+            stroke={level === gridLevels - 1 ? "#d1d5db" : "#e5e7eb"}
+            strokeWidth={level === gridLevels - 1 ? 1 : 0.5}
+            strokeDasharray={level < gridLevels - 1 ? "4 4" : undefined}
           />
+        ))}
+
+        {/* Grid level labels */}
+        {gridLabels.map((g, i) => (
+          <text
+            key={i}
+            x={cx + 4}
+            y={g.y - 4}
+            className="fill-gray-300"
+            fontSize={9}
+          >
+            {formatFollowers(g.value)}
+          </text>
         ))}
 
         {/* Axis lines */}
@@ -140,35 +220,50 @@ export default function RadarChart({ channels, visibleChannelIds }: RadarChartPr
               x2={p.x}
               y2={p.y}
               stroke="#e5e7eb"
-              strokeWidth={0.75}
+              strokeWidth={0.5}
             />
           );
         })}
 
-        {/* Data polygon fill */}
-        <polygon
-          points={dataPolygon}
-          fill="rgba(147, 51, 234, 0.15)"
-          stroke="rgba(147, 51, 234, 0.8)"
+        {/* Data polygon fill + stroke */}
+        <path
+          d={dataPath}
+          fill="url(#radar-fill)"
+          stroke="rgba(147, 51, 234, 0.7)"
           strokeWidth={2}
+          strokeLinejoin="round"
+          filter="url(#radar-glow)"
         />
 
         {/* Data points */}
-        {dataPoints.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={4}
-            fill={data[i].color}
-            stroke="white"
-            strokeWidth={2}
-          />
-        ))}
+        {dataPoints.map((p, i) => {
+          const opacity = fractions[i];
+          return (
+            <g key={i}>
+              {/* Outer glow ring */}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={8}
+                fill={data[i].color}
+                fillOpacity={opacity * 0.15}
+              />
+              {/* Inner dot */}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={4.5}
+                fill={data[i].color}
+                fillOpacity={Math.max(opacity, 0.2)}
+                stroke="white"
+                strokeWidth={2}
+              />
+            </g>
+          );
+        })}
 
         {/* Labels */}
         {labels.map((l, i) => {
-          // Determine text anchor based on position
           const angle = angleFor(i);
           const cos = Math.cos(angle);
           let anchor: "start" | "middle" | "end" = "middle";
@@ -176,25 +271,29 @@ export default function RadarChart({ channels, visibleChannelIds }: RadarChartPr
           else if (cos < -0.3) anchor = "end";
 
           return (
-            <g key={i}>
+            <g
+              key={i}
+              opacity={l.dimmed ? 0.35 : 1}
+              style={{ transition: "opacity 0.3s ease" }}
+            >
               <text
                 x={l.x}
-                y={l.y - 6}
+                y={l.y - 7}
                 textAnchor={anchor}
                 dominantBaseline="central"
                 className="fill-gray-700"
-                fontSize={13}
+                fontSize={12}
                 fontWeight={600}
               >
                 {l.label}
               </text>
               <text
                 x={l.x}
-                y={l.y + 10}
+                y={l.y + 9}
                 textAnchor={anchor}
                 dominantBaseline="central"
                 className="fill-gray-400"
-                fontSize={11}
+                fontSize={10}
               >
                 {l.value > 0 ? formatFollowers(l.value) : "No data"}
               </text>
@@ -203,7 +302,8 @@ export default function RadarChart({ channels, visibleChannelIds }: RadarChartPr
         })}
 
         {/* Center dot */}
-        <circle cx={cx} cy={cy} r={2} fill="#d1d5db" />
+        <circle cx={cx} cy={cy} r={2.5} fill="#d1d5db" />
+        <circle cx={cx} cy={cy} r={1} fill="white" />
       </svg>
     </div>
   );
