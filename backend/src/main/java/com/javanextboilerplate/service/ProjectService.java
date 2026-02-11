@@ -60,7 +60,7 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public ProjectResponse getProject(Long projectId, String supabaseUserId) {
         User user = userService.getUserBySupabaseId(supabaseUserId);
-        SaasProject project = projectRepository.findByIdAndUserId(projectId, user.getId())
+        SaasProject project = projectRepository.findByIdAndUserIdWithChannels(projectId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
         return ProjectResponse.from(project);
     }

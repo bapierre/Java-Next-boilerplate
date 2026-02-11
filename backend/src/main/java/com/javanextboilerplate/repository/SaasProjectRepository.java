@@ -36,4 +36,10 @@ public interface SaasProjectRepository extends JpaRepository<SaasProject, Long> 
      */
     @Query("SELECT DISTINCT p FROM SaasProject p LEFT JOIN FETCH p.channels WHERE p.userId = :userId")
     List<SaasProject> findByUserIdWithChannels(Long userId);
+
+    /**
+     * Find a single project with channels eagerly loaded
+     */
+    @Query("SELECT p FROM SaasProject p LEFT JOIN FETCH p.channels WHERE p.id = :id AND p.userId = :userId")
+    Optional<SaasProject> findByIdAndUserIdWithChannels(Long id, Long userId);
 }

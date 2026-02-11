@@ -12,6 +12,7 @@ interface ChannelResponse {
   channelName: string;
   channelUrl: string | null;
   isActive: boolean;
+  followerCount?: number | null;
   lastSyncedAt: string | null;
 }
 

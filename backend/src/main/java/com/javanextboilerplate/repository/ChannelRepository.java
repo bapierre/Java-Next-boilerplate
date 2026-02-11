@@ -49,4 +49,9 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
      * Count active channels by platform for a project
      */
     long countByProjectIdAndPlatformAndIsActiveTrue(Long projectId, Platform platform);
+
+    /**
+     * Find all active channels across all projects (for scheduled sync)
+     */
+    List<Channel> findByIsActiveTrue();
 }

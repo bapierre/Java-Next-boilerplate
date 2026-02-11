@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ProjectForm from "@/components/dashboard/ProjectForm";
 import {
   ConnectedSources,
   ConnectPlatformModal,
 } from "@/components/dashboard/ChannelCatalog";
+import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import type { ProjectResponse } from "@/components/dashboard/ProjectList";
 
 export default function ProjectDetailPage() {
@@ -189,32 +189,11 @@ export default function ProjectDetailPage() {
           />
         </div>
 
-        {/* Graphs area (placeholder for future) */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
-            Analytics
-          </h3>
-          <Card className="bg-white border-gray-200">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-10 h-10 text-gray-300 mb-3"
-              >
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-              </svg>
-              <p className="text-gray-400 text-sm">
-                Analytics will appear here once your channels are active.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Analytics panel (tabbed: Follower Growth / Platform Reach) */}
+        <AnalyticsPanel
+          projectId={project.id}
+          channels={project.channels}
+        />
 
         {/* Connect platform modal */}
         {showConnectModal && (
