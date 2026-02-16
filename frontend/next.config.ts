@@ -43,7 +43,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://pbs.twimg.com https://avatars.githubusercontent.com",
+              "img-src 'self' data: https:",
               "font-src 'self' data:",
               `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'} https://*.supabase.co https://api.stripe.com`,
               "frame-src https://js.stripe.com",

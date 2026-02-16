@@ -63,6 +63,7 @@ public class Post {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("recordedAt DESC")
     @Builder.Default
     private List<PostStats> stats = new ArrayList<>();
 

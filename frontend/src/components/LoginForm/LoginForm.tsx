@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [oauthProvider, setOauthProvider] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
-  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -60,7 +58,8 @@ export function LoginForm() {
       if (error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        router.push("/dashboard");
+        // Full navigation so the browser triggers "Save password?" prompt
+        window.location.href = "/dashboard";
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -148,7 +147,9 @@ export function LoginForm() {
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -158,7 +159,9 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

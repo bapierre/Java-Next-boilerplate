@@ -13,7 +13,7 @@ export const createClient = () =>
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: {
-        maxAge: getRememberMe() ? THIRTY_DAYS : 0,
+        maxAge: getRememberMe() ? THIRTY_DAYS : undefined,
       },
     }
   );

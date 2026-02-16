@@ -22,6 +22,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -37,6 +40,7 @@ public class ChannelOAuthService {
 
     private final SaasProjectRepository projectRepository;
     private final ChannelRepository channelRepository;
+    private final ChannelSyncService channelSyncService;
     private final UserService userService;
     private final ObjectMapper objectMapper;
 
@@ -82,7 +86,7 @@ public class ChannelOAuthService {
     );
 
     private static final Map<Platform, String> SCOPES = Map.of(
-            Platform.TIKTOK, "user.info.basic,user.info.stats,video.list",
+            Platform.TIKTOK, "user.info.basic,user.info.profile,user.info.stats,video.list",
             Platform.INSTAGRAM, "instagram_basic,instagram_manage_insights,pages_show_list",
             Platform.YOUTUBE, "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly",
             Platform.TWITTER, "tweet.read users.read offline.access",
@@ -188,6 +192,18 @@ public class ChannelOAuthService {
         channelRepository.save(channel);
         log.info("OAuth completed for {} — connected '{}' on project {}",
                 platform.getValue(), userInfo.displayName, projectId);
+
+        // Trigger initial sync AFTER transaction commits so a sync failure can't roll back the channel save
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    channelSyncService.syncChannel(channel);
+                } catch (Exception e) {
+                    log.warn("Initial sync failed for new channel {} (non-fatal): {}", channel.getId(), e.getMessage());
+                }
+            }
+        });
 
         return projectId;
     }
@@ -428,17 +444,18 @@ public class ChannelOAuthService {
 
     private PlatformUserInfo fetchTwitterUser(String accessToken) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.twitter.com/2/users/me?user.fields=public_metrics,profile_image_url"))
+                .uri(URI.create("https://api.twitter.com/2/users/me?user.fields=public_metrics"))
                 .header("Authorization", "Bearer " + accessToken)
                 .GET()
                 .timeout(Duration.ofSeconds(15))
                 .build();
 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        log.info("Twitter user info response [status={}]: {}", response.statusCode(), response.body());
         JsonNode json = objectMapper.readTree(response.body());
         JsonNode data = json.path("data");
 
-        String username = data.path("username").asText(data.path("name").asText("Twitter User"));
+        String username = data.path("username").asText(data.path("name").asText("X Account"));
         String id = data.path("id").asText("unknown");
 
         long followers = data.path("public_metrics").path("followers_count").asLong(0);

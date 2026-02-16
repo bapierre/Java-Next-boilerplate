@@ -7,6 +7,13 @@ function createAbortSignal(timeoutMs: number): AbortSignal {
   return AbortSignal.timeout(timeoutMs);
 }
 
+function handleUnauthorized(): never {
+  if (typeof window !== "undefined") {
+    window.location.href = "/auth/login";
+  }
+  throw new Error("Session expired. Redirecting to login...");
+}
+
 export const apiClient = {
   async post<T = unknown>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -18,6 +25,8 @@ export const apiClient = {
       body: JSON.stringify(data),
       signal: createAbortSignal(DEFAULT_TIMEOUT),
     });
+
+    if (response.status === 401) handleUnauthorized();
 
     if (!response.ok) {
       throw new Error(getErrorMessage(response.status));
@@ -35,6 +44,8 @@ export const apiClient = {
       credentials: "include",
       signal: createAbortSignal(DEFAULT_TIMEOUT),
     });
+
+    if (response.status === 401) handleUnauthorized();
 
     if (!response.ok) {
       throw new Error(getErrorMessage(response.status));
@@ -54,6 +65,8 @@ export const apiClient = {
       signal: createAbortSignal(DEFAULT_TIMEOUT),
     });
 
+    if (response.status === 401) handleUnauthorized();
+
     if (!response.ok) {
       throw new Error(getErrorMessage(response.status));
     }
@@ -71,6 +84,8 @@ export const apiClient = {
       signal: createAbortSignal(DEFAULT_TIMEOUT),
     });
 
+    if (response.status === 401) handleUnauthorized();
+
     if (!response.ok) {
       throw new Error(getErrorMessage(response.status));
     }
@@ -81,8 +96,6 @@ function getErrorMessage(status: number): string {
   switch (status) {
     case 400:
       return "Invalid request. Please check your input.";
-    case 401:
-      return "Please sign in to continue.";
     case 403:
       return "You don't have permission to perform this action.";
     case 404:

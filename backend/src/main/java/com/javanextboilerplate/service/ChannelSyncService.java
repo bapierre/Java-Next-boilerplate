@@ -4,8 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.javanextboilerplate.entity.Channel;
 import com.javanextboilerplate.entity.ChannelStats;
+import com.javanextboilerplate.entity.Post;
+import com.javanextboilerplate.entity.PostStats;
 import com.javanextboilerplate.repository.ChannelRepository;
 import com.javanextboilerplate.repository.ChannelStatsRepository;
+import com.javanextboilerplate.repository.PostRepository;
+import com.javanextboilerplate.repository.PostStatsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,9 +24,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +40,8 @@ public class ChannelSyncService {
 
     private final ChannelRepository channelRepository;
     private final ChannelStatsRepository channelStatsRepository;
+    private final PostRepository postRepository;
+    private final PostStatsRepository postStatsRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${TWITTER_CLIENT_ID:}")
@@ -50,6 +61,7 @@ public class ChannelSyncService {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     @Scheduled(cron = "0 0 7 * * *")
     public void syncAllChannels() {
         log.info("Starting daily channel follower sync");
@@ -111,6 +123,14 @@ public class ChannelSyncService {
 
         log.debug("Synced channel {} ({}): {} followers",
                 channel.getId(), channel.getPlatform().getValue(), followers);
+
+        // Sync recent posts
+        try {
+            syncPosts(channel);
+        } catch (Exception e) {
+            log.warn("Post sync failed for channel {} ({}): {}",
+                    channel.getId(), channel.getPlatform().getValue(), e.getMessage());
+        }
     }
 
     // ─── Follower Count Fetching ───
@@ -323,6 +343,466 @@ public class ChannelSyncService {
 
         log.info("Refreshed TikTok token for channel {}", channel.getId());
         return true;
+    }
+
+    // ─── Post Syncing ───
+
+    private record RawPost(
+            String platformPostId,
+            String title,
+            String description,
+            String postUrl,
+            String thumbnailUrl,
+            Integer durationSeconds,
+            LocalDateTime publishedAt,
+            Long views,
+            Long likes,
+            Long comments,
+            Long shares
+    ) {}
+
+    private void syncPosts(Channel channel) {
+        List<RawPost> rawPosts = fetchRecentPosts(channel);
+        if (rawPosts.isEmpty()) return;
+
+        LocalDateTime now = LocalDateTime.now();
+        int created = 0;
+        int updated = 0;
+
+        for (RawPost raw : rawPosts) {
+            // Upsert post
+            Post post = postRepository.findByChannelIdAndPlatformPostId(channel.getId(), raw.platformPostId())
+                    .orElse(null);
+
+            if (post == null) {
+                post = Post.builder()
+                        .channel(channel)
+                        .platformPostId(raw.platformPostId())
+                        .title(raw.title())
+                        .description(raw.description())
+                        .postUrl(raw.postUrl())
+                        .thumbnailUrl(raw.thumbnailUrl())
+                        .durationSeconds(raw.durationSeconds())
+                        .publishedAt(raw.publishedAt() != null ? raw.publishedAt() : now)
+                        .build();
+                post = postRepository.save(post);
+                created++;
+            } else {
+                if (raw.title() != null) post.setTitle(raw.title());
+                if (raw.description() != null) post.setDescription(raw.description());
+                if (raw.postUrl() != null) post.setPostUrl(raw.postUrl());
+                if (raw.thumbnailUrl() != null) post.setThumbnailUrl(raw.thumbnailUrl());
+                if (raw.durationSeconds() != null) post.setDurationSeconds(raw.durationSeconds());
+                post = postRepository.save(post);
+                updated++;
+            }
+
+            // Save stats snapshot
+            PostStats stats = PostStats.builder()
+                    .post(post)
+                    .recordedAt(now)
+                    .viewsCount(raw.views() != null ? raw.views() : 0L)
+                    .likesCount(raw.likes() != null ? raw.likes() : 0L)
+                    .commentsCount(raw.comments() != null ? raw.comments() : 0L)
+                    .sharesCount(raw.shares() != null ? raw.shares() : 0L)
+                    .build();
+            postStatsRepository.save(stats);
+        }
+
+        log.debug("Post sync for channel {} ({}): {} created, {} updated",
+                channel.getId(), channel.getPlatform().getValue(), created, updated);
+    }
+
+    private List<RawPost> fetchRecentPosts(Channel channel) {
+        try {
+            return switch (channel.getPlatform()) {
+                case TWITTER -> Collections.emptyList(); // Free tier doesn't include tweet.read
+                case YOUTUBE -> fetchYouTubePosts(channel.getAccessToken());
+                case TIKTOK -> fetchTikTokPosts(channel.getAccessToken());
+                case INSTAGRAM -> fetchInstagramPosts(channel.getAccessToken());
+                case FACEBOOK -> fetchFacebookPosts(channel.getAccessToken());
+            };
+        } catch (Exception e) {
+            log.warn("Failed to fetch posts for {} channel {}: {}",
+                    channel.getPlatform().getValue(), channel.getId(), e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private List<RawPost> fetchTwitterPosts(String accessToken) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.twitter.com/2/users/me/tweets?tweet.fields=created_at,public_metrics&max_results=10"))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+        JsonNode data = json.path("data");
+
+        if (!data.isArray()) return Collections.emptyList();
+
+        List<RawPost> posts = new ArrayList<>();
+        for (JsonNode tweet : data) {
+            String text = tweet.path("text").asText("");
+            String title = text.length() > 500 ? text.substring(0, 500) : text;
+            JsonNode metrics = tweet.path("public_metrics");
+
+            LocalDateTime publishedAt = null;
+            String createdAt = tweet.path("created_at").asText("");
+            if (!createdAt.isEmpty()) {
+                publishedAt = LocalDateTime.parse(createdAt.replace("Z", "").replace(".000", ""));
+            }
+
+            posts.add(new RawPost(
+                    tweet.path("id").asText(),
+                    title,
+                    null,
+                    "https://twitter.com/i/status/" + tweet.path("id").asText(),
+                    null,
+                    null,
+                    publishedAt,
+                    metrics.path("impression_count").asLong(0),
+                    metrics.path("like_count").asLong(0),
+                    metrics.path("reply_count").asLong(0),
+                    metrics.path("retweet_count").asLong(0)
+            ));
+        }
+        return posts;
+    }
+
+    private List<RawPost> fetchYouTubePosts(String accessToken) throws Exception {
+        // Step 1: Search for recent videos
+        HttpRequest searchRequest = HttpRequest.newBuilder()
+                .uri(URI.create("https://www.googleapis.com/youtube/v3/search?part=snippet&forMine=true&type=video&maxResults=10&order=date"))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> searchResponse = HTTP_CLIENT.send(searchRequest, HttpResponse.BodyHandlers.ofString());
+        JsonNode searchJson = objectMapper.readTree(searchResponse.body());
+        JsonNode items = searchJson.path("items");
+
+        if (!items.isArray() || items.isEmpty()) return Collections.emptyList();
+
+        // Collect video IDs
+        String videoIds = new ArrayList<String>() {{
+            for (JsonNode item : items) {
+                add(item.path("id").path("videoId").asText());
+            }
+        }}.stream().filter(id -> !id.isEmpty()).collect(Collectors.joining(","));
+
+        if (videoIds.isEmpty()) return Collections.emptyList();
+
+        // Step 2: Get video stats and details
+        HttpRequest detailsRequest = HttpRequest.newBuilder()
+                .uri(URI.create("https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails,snippet&id=" + encode(videoIds)))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> detailsResponse = HTTP_CLIENT.send(detailsRequest, HttpResponse.BodyHandlers.ofString());
+        JsonNode detailsJson = objectMapper.readTree(detailsResponse.body());
+        JsonNode videoItems = detailsJson.path("items");
+
+        if (!videoItems.isArray()) return Collections.emptyList();
+
+        List<RawPost> posts = new ArrayList<>();
+        for (JsonNode video : videoItems) {
+            String videoId = video.path("id").asText();
+            JsonNode snippet = video.path("snippet");
+            JsonNode stats = video.path("statistics");
+            JsonNode contentDetails = video.path("contentDetails");
+
+            LocalDateTime publishedAt = null;
+            String publishedAtStr = snippet.path("publishedAt").asText("");
+            if (!publishedAtStr.isEmpty()) {
+                publishedAt = LocalDateTime.parse(publishedAtStr.replace("Z", "").split("\\.")[0]);
+            }
+
+            Integer durationSeconds = parseDuration(contentDetails.path("duration").asText(""));
+
+            posts.add(new RawPost(
+                    videoId,
+                    snippet.path("title").asText(""),
+                    snippet.path("description").asText(""),
+                    "https://www.youtube.com/watch?v=" + videoId,
+                    snippet.path("thumbnails").path("medium").path("url").asText(null),
+                    durationSeconds,
+                    publishedAt,
+                    stats.path("viewCount").asLong(0),
+                    stats.path("likeCount").asLong(0),
+                    stats.path("commentCount").asLong(0),
+                    0L
+            ));
+        }
+        return posts;
+    }
+
+    private List<RawPost> fetchTikTokPosts(String accessToken) throws Exception {
+        // Step 1: Get video list
+        String listBody = objectMapper.writeValueAsString(java.util.Map.of(
+                "max_count", 10
+        ));
+
+        HttpRequest listRequest = HttpRequest.newBuilder()
+                .uri(URI.create("https://open.tiktokapis.com/v2/video/list/?fields=id,title,create_time,cover_image_url,duration,share_url"))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(listBody))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> listResponse = HTTP_CLIENT.send(listRequest, HttpResponse.BodyHandlers.ofString());
+        JsonNode listJson = objectMapper.readTree(listResponse.body());
+        JsonNode videos = listJson.path("data").path("videos");
+
+        if (!videos.isArray() || videos.isEmpty()) return Collections.emptyList();
+
+        // Collect video IDs for stats query
+        List<String> videoIds = new ArrayList<>();
+        for (JsonNode v : videos) {
+            String id = v.path("id").asText("");
+            if (!id.isEmpty()) videoIds.add(id);
+        }
+
+        // Step 2: Get video stats
+        java.util.Map<String, Long> viewsMap = new java.util.HashMap<>();
+        java.util.Map<String, Long> likesMap = new java.util.HashMap<>();
+        java.util.Map<String, Long> commentsMap = new java.util.HashMap<>();
+        java.util.Map<String, Long> sharesMap = new java.util.HashMap<>();
+
+        if (!videoIds.isEmpty()) {
+            String queryBody = objectMapper.writeValueAsString(java.util.Map.of(
+                    "filters", java.util.Map.of("video_ids", videoIds)
+            ));
+
+            HttpRequest queryRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("https://open.tiktokapis.com/v2/video/query/?fields=id,like_count,comment_count,share_count,view_count"))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(queryBody))
+                    .timeout(Duration.ofSeconds(15))
+                    .build();
+
+            HttpResponse<String> queryResponse = HTTP_CLIENT.send(queryRequest, HttpResponse.BodyHandlers.ofString());
+            JsonNode queryJson = objectMapper.readTree(queryResponse.body());
+            JsonNode statsVideos = queryJson.path("data").path("videos");
+
+            if (statsVideos.isArray()) {
+                for (JsonNode sv : statsVideos) {
+                    String id = sv.path("id").asText();
+                    viewsMap.put(id, sv.path("view_count").asLong(0));
+                    likesMap.put(id, sv.path("like_count").asLong(0));
+                    commentsMap.put(id, sv.path("comment_count").asLong(0));
+                    sharesMap.put(id, sv.path("share_count").asLong(0));
+                }
+            }
+        }
+
+        List<RawPost> posts = new ArrayList<>();
+        for (JsonNode video : videos) {
+            String id = video.path("id").asText();
+            long createTime = video.path("create_time").asLong(0);
+            LocalDateTime publishedAt = createTime > 0
+                    ? LocalDateTime.ofInstant(Instant.ofEpochSecond(createTime), ZoneOffset.UTC)
+                    : null;
+
+            posts.add(new RawPost(
+                    id,
+                    video.path("title").asText(""),
+                    null,
+                    video.path("share_url").asText(null),
+                    video.path("cover_image_url").asText(null),
+                    video.path("duration").asInt(0) > 0 ? video.path("duration").asInt() : null,
+                    publishedAt,
+                    viewsMap.getOrDefault(id, 0L),
+                    likesMap.getOrDefault(id, 0L),
+                    commentsMap.getOrDefault(id, 0L),
+                    sharesMap.getOrDefault(id, 0L)
+            ));
+        }
+        return posts;
+    }
+
+    private List<RawPost> fetchInstagramPosts(String accessToken) throws Exception {
+        // Step 1: Get recent media
+        String url = "https://graph.instagram.com/me/media?fields=id,caption,timestamp,media_url,permalink,thumbnail_url&limit=10&access_token="
+                + encode(accessToken);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode json = objectMapper.readTree(response.body());
+        JsonNode data = json.path("data");
+
+        if (!data.isArray() || data.isEmpty()) return Collections.emptyList();
+
+        List<RawPost> posts = new ArrayList<>();
+        for (JsonNode media : data) {
+            String mediaId = media.path("id").asText();
+
+            // Step 2: Get engagement stats for each media
+            long likes = 0;
+            long comments = 0;
+            try {
+                String statsUrl = "https://graph.instagram.com/" + mediaId
+                        + "?fields=like_count,comments_count&access_token=" + encode(accessToken);
+
+                HttpRequest statsRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(statsUrl))
+                        .GET()
+                        .timeout(Duration.ofSeconds(15))
+                        .build();
+
+                HttpResponse<String> statsResponse = HTTP_CLIENT.send(statsRequest, HttpResponse.BodyHandlers.ofString());
+                JsonNode statsJson = objectMapper.readTree(statsResponse.body());
+                likes = statsJson.path("like_count").asLong(0);
+                comments = statsJson.path("comments_count").asLong(0);
+            } catch (Exception e) {
+                log.debug("Failed to fetch Instagram media stats for {}: {}", mediaId, e.getMessage());
+            }
+
+            LocalDateTime publishedAt = null;
+            String timestamp = media.path("timestamp").asText("");
+            if (!timestamp.isEmpty()) {
+                publishedAt = LocalDateTime.parse(timestamp.replace("Z", "").split("\\+")[0].split("\\.")[0]);
+            }
+
+            String caption = media.path("caption").asText("");
+            String title = caption.length() > 500 ? caption.substring(0, 500) : caption;
+            String thumbnail = media.path("thumbnail_url").asText(null);
+            if (thumbnail == null) {
+                thumbnail = media.path("media_url").asText(null);
+            }
+
+            posts.add(new RawPost(
+                    mediaId,
+                    title,
+                    null,
+                    media.path("permalink").asText(null),
+                    thumbnail,
+                    null,
+                    publishedAt,
+                    0L, // Instagram doesn't expose view count for all media types
+                    likes,
+                    comments,
+                    0L
+            ));
+        }
+        return posts;
+    }
+
+    private List<RawPost> fetchFacebookPosts(String accessToken) throws Exception {
+        // Step 1: Get page ID
+        String accountsUrl = "https://graph.facebook.com/v21.0/me/accounts?fields=id&limit=1&access_token="
+                + encode(accessToken);
+
+        HttpRequest accountsRequest = HttpRequest.newBuilder()
+                .uri(URI.create(accountsUrl))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> accountsResponse = HTTP_CLIENT.send(accountsRequest, HttpResponse.BodyHandlers.ofString());
+        JsonNode accountsJson = objectMapper.readTree(accountsResponse.body());
+        JsonNode accountsData = accountsJson.path("data");
+
+        if (!accountsData.isArray() || accountsData.isEmpty()) return Collections.emptyList();
+
+        String pageId = accountsData.get(0).path("id").asText("");
+        String pageAccessToken = accountsData.get(0).path("access_token").asText(accessToken);
+
+        if (pageId.isEmpty()) return Collections.emptyList();
+
+        // Step 2: Get page posts
+        String postsUrl = "https://graph.facebook.com/v21.0/" + pageId
+                + "/posts?fields=id,message,created_time,permalink_url,full_picture&limit=10&access_token="
+                + encode(pageAccessToken);
+
+        HttpRequest postsRequest = HttpRequest.newBuilder()
+                .uri(URI.create(postsUrl))
+                .GET()
+                .timeout(Duration.ofSeconds(15))
+                .build();
+
+        HttpResponse<String> postsResponse = HTTP_CLIENT.send(postsRequest, HttpResponse.BodyHandlers.ofString());
+        JsonNode postsJson = objectMapper.readTree(postsResponse.body());
+        JsonNode postsData = postsJson.path("data");
+
+        if (!postsData.isArray() || postsData.isEmpty()) return Collections.emptyList();
+
+        List<RawPost> posts = new ArrayList<>();
+        for (JsonNode fbPost : postsData) {
+            String postId = fbPost.path("id").asText();
+
+            // Step 3: Get engagement stats
+            long likes = 0;
+            long comments = 0;
+            long shares = 0;
+            try {
+                String statsUrl = "https://graph.facebook.com/v21.0/" + postId
+                        + "?fields=likes.limit(0).summary(true),comments.limit(0).summary(true),shares&access_token="
+                        + encode(pageAccessToken);
+
+                HttpRequest statsRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(statsUrl))
+                        .GET()
+                        .timeout(Duration.ofSeconds(15))
+                        .build();
+
+                HttpResponse<String> statsResponse = HTTP_CLIENT.send(statsRequest, HttpResponse.BodyHandlers.ofString());
+                JsonNode statsJson = objectMapper.readTree(statsResponse.body());
+                likes = statsJson.path("likes").path("summary").path("total_count").asLong(0);
+                comments = statsJson.path("comments").path("summary").path("total_count").asLong(0);
+                shares = statsJson.path("shares").path("count").asLong(0);
+            } catch (Exception e) {
+                log.debug("Failed to fetch Facebook post stats for {}: {}", postId, e.getMessage());
+            }
+
+            LocalDateTime publishedAt = null;
+            String createdTime = fbPost.path("created_time").asText("");
+            if (!createdTime.isEmpty()) {
+                publishedAt = LocalDateTime.parse(createdTime.replace("Z", "").split("\\+")[0].split("\\.")[0]);
+            }
+
+            String message = fbPost.path("message").asText("");
+            String title = message.length() > 500 ? message.substring(0, 500) : message;
+
+            posts.add(new RawPost(
+                    postId,
+                    title,
+                    null,
+                    fbPost.path("permalink_url").asText(null),
+                    fbPost.path("full_picture").asText(null),
+                    null,
+                    publishedAt,
+                    0L, // Facebook doesn't easily expose view count for regular posts
+                    likes,
+                    comments,
+                    shares
+            ));
+        }
+        return posts;
+    }
+
+    /**
+     * Parse ISO 8601 duration (e.g., "PT1H2M3S") to seconds.
+     */
+    private static Integer parseDuration(String iso8601) {
+        if (iso8601 == null || iso8601.isEmpty()) return null;
+        try {
+            return (int) Duration.parse(iso8601).getSeconds();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static String encode(String value) {

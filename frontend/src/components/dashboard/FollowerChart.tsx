@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { apiClient } from "@/lib/api-client";
 import { getPlatformInfo } from "./ChannelCatalog";
 
@@ -15,6 +15,18 @@ interface ChannelLine {
   channelName: string;
   color: string;
   data: StatsPoint[];
+}
+
+interface PostMarker {
+  id: number;
+  platform: string;
+  channelName: string;
+  title: string;
+  postUrl: string | null;
+  publishedAt: string;
+  viewsCount: number;
+  likesCount: number;
+  color: string;
 }
 
 interface FollowerChartProps {
@@ -56,7 +68,11 @@ export default function FollowerChart({
   visibleChannelIds,
 }: FollowerChartProps) {
   const [lines, setLines] = useState<ChannelLine[]>([]);
+  const [posts, setPosts] = useState<PostMarker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredPost, setHoveredPost] = useState<PostMarker | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +81,9 @@ export default function FollowerChart({
       setLoading(true);
       const results: ChannelLine[] = [];
 
+      // Build a map of platform -> color for post markers
+      const platformColorMap = new Map<string, { color: string; channelName: string }>();
+
       for (const ch of channels) {
         try {
           const data = await apiClient.get<StatsPoint[]>(
@@ -72,13 +91,16 @@ export default function FollowerChart({
           );
           if (cancelled) return;
 
+          const info = getPlatformInfo(ch.platform);
+          const color = info?.color ?? "#6b7280";
+          platformColorMap.set(ch.platform, { color, channelName: ch.channelName });
+
           if (data.length > 0) {
-            const info = getPlatformInfo(ch.platform);
             results.push({
               channelId: ch.id,
               platform: ch.platform,
               channelName: ch.channelName,
-              color: info?.color ?? "#6b7280",
+              color,
               data,
             });
           }
@@ -87,8 +109,32 @@ export default function FollowerChart({
         }
       }
 
+      // Fetch posts for the project
+      let postMarkers: PostMarker[] = [];
+      try {
+        const postData = await apiClient.get<{
+          id: number;
+          platform: string;
+          channelName: string;
+          title: string;
+          postUrl: string | null;
+          publishedAt: string;
+          viewsCount: number;
+          likesCount: number;
+        }[]>(`/api/projects/${projectId}/posts?days=${days}`);
+        if (cancelled) return;
+
+        postMarkers = postData.map((p) => ({
+          ...p,
+          color: platformColorMap.get(p.platform)?.color ?? getPlatformInfo(p.platform)?.color ?? "#6b7280",
+        }));
+      } catch {
+        // posts fetch failed — still show chart without markers
+      }
+
       if (!cancelled) {
         setLines(results);
+        setPosts(postMarkers);
         setLoading(false);
       }
     }
@@ -143,6 +189,10 @@ export default function FollowerChart({
     ? lines.filter((l) => visibleChannelIds.has(l.channelId))
     : lines;
 
+  // Filter posts to only visible platforms
+  const visiblePlatforms = new Set(visibleLines.map((l) => l.platform));
+  const visiblePosts = posts.filter((p) => visiblePlatforms.has(p.platform));
+
   if (visibleLines.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -158,10 +208,11 @@ export default function FollowerChart({
     );
   }
 
-  // Chart dimensions
+  // Chart dimensions — increased bottom padding for post marker band
   const W = 600;
-  const H = 300;
-  const PAD = { top: 20, right: 20, bottom: 40, left: 60 };
+  const MARKER_BAND = visiblePosts.length > 0 ? 24 : 0;
+  const H = 300 + MARKER_BAND;
+  const PAD = { top: 20, right: 20, bottom: 40 + MARKER_BAND, left: 60 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
@@ -191,147 +242,251 @@ export default function FollowerChart({
     (_, i) => minTime + (timeRange * i) / (xTickCount - 1 || 1)
   );
 
+  // Marker band Y position (below plot, above x-axis labels)
+  const markerY = PAD.top + plotH + 16;
+
+  function handleMarkerHover(post: PostMarker, e: React.MouseEvent) {
+    setHoveredPost(post);
+    if (svgRef.current) {
+      const rect = svgRef.current.getBoundingClientRect();
+      setTooltipPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  }
+
+  function handleMarkerLeave() {
+    setHoveredPost(null);
+    setTooltipPos(null);
+  }
+
+  function handleMarkerClick(post: PostMarker) {
+    if (post.postUrl) {
+      window.open(post.postUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
   return (
     <div className="flex flex-col">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        <defs>
-          {visibleLines.map((line) => {
-            const rgb = hexToRgb(line.color);
-            return (
-              <linearGradient
-                key={`grad-${line.channelId}`}
-                id={`area-gradient-${line.channelId}`}
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop
-                  offset="0%"
-                  stopColor={`rgb(${rgb.r},${rgb.g},${rgb.b})`}
-                  stopOpacity="0.2"
-                />
-                <stop
-                  offset="100%"
-                  stopColor={`rgb(${rgb.r},${rgb.g},${rgb.b})`}
-                  stopOpacity="0.02"
-                />
-              </linearGradient>
-            );
-          })}
-        </defs>
+      <div className="relative">
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full">
+          <defs>
+            {visibleLines.map((line) => {
+              const rgb = hexToRgb(line.color);
+              return (
+                <linearGradient
+                  key={`grad-${line.channelId}`}
+                  id={`area-gradient-${line.channelId}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={`rgb(${rgb.r},${rgb.g},${rgb.b})`}
+                    stopOpacity="0.2"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={`rgb(${rgb.r},${rgb.g},${rgb.b})`}
+                    stopOpacity="0.02"
+                  />
+                </linearGradient>
+              );
+            })}
+          </defs>
 
-        {/* Y grid lines */}
-        {yTicks.map((v, i) => (
-          <g key={`y-${i}`}>
-            <line
-              x1={PAD.left}
-              y1={scaleY(v)}
-              x2={W - PAD.right}
-              y2={scaleY(v)}
-              stroke="#f3f4f6"
-              strokeWidth={1}
-              strokeDasharray={i === 0 ? undefined : "4 4"}
-            />
+          {/* Y grid lines */}
+          {yTicks.map((v, i) => (
+            <g key={`y-${i}`}>
+              <line
+                x1={PAD.left}
+                y1={scaleY(v)}
+                x2={W - PAD.right}
+                y2={scaleY(v)}
+                stroke="#f3f4f6"
+                strokeWidth={1}
+                strokeDasharray={i === 0 ? undefined : "4 4"}
+              />
+              <text
+                x={PAD.left - 10}
+                y={scaleY(v)}
+                textAnchor="end"
+                dominantBaseline="central"
+                className="fill-gray-400"
+                fontSize={9}
+              >
+                {formatCount(Math.round(v))}
+              </text>
+            </g>
+          ))}
+
+          {/* X-axis labels */}
+          {xTicks.map((t, i) => (
             <text
-              x={PAD.left - 10}
-              y={scaleY(v)}
-              textAnchor="end"
-              dominantBaseline="central"
+              key={`x-${i}`}
+              x={scaleX(t)}
+              y={H - 6}
+              textAnchor="middle"
               className="fill-gray-400"
               fontSize={9}
             >
-              {formatCount(Math.round(v))}
+              {formatDate(new Date(t).toISOString())}
             </text>
-          </g>
-        ))}
+          ))}
 
-        {/* X-axis labels */}
-        {xTicks.map((t, i) => (
-          <text
-            key={`x-${i}`}
-            x={scaleX(t)}
-            y={H - 6}
-            textAnchor="middle"
-            className="fill-gray-400"
-            fontSize={9}
+          {/* Area fills + lines */}
+          {visibleLines.map((line) => {
+            const sortedData = [...line.data].sort(
+              (a, b) =>
+                new Date(a.recordedAt).getTime() -
+                new Date(b.recordedAt).getTime()
+            );
+
+            // Area path
+            const areaPath =
+              `M${scaleX(new Date(sortedData[0].recordedAt).getTime())},${scaleY(sortedData[0].followersCount)}` +
+              sortedData
+                .slice(1)
+                .map(
+                  (p) =>
+                    `L${scaleX(new Date(p.recordedAt).getTime())},${scaleY(p.followersCount)}`
+                )
+                .join("") +
+              `L${scaleX(new Date(sortedData[sortedData.length - 1].recordedAt).getTime())},${PAD.top + plotH}` +
+              `L${scaleX(new Date(sortedData[0].recordedAt).getTime())},${PAD.top + plotH}Z`;
+
+            // Line path
+            const linePath =
+              `M${scaleX(new Date(sortedData[0].recordedAt).getTime())},${scaleY(sortedData[0].followersCount)}` +
+              sortedData
+                .slice(1)
+                .map(
+                  (p) =>
+                    `L${scaleX(new Date(p.recordedAt).getTime())},${scaleY(p.followersCount)}`
+                )
+                .join("");
+
+            return (
+              <g key={line.channelId}>
+                {/* Gradient area fill */}
+                <path
+                  d={areaPath}
+                  fill={`url(#area-gradient-${line.channelId})`}
+                />
+                {/* Line */}
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke={line.color}
+                  strokeWidth={2.5}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                {/* Data points */}
+                {sortedData.map((p, i) => (
+                  <g key={i}>
+                    <circle
+                      cx={scaleX(new Date(p.recordedAt).getTime())}
+                      cy={scaleY(p.followersCount)}
+                      r={6}
+                      fill={line.color}
+                      fillOpacity={0.1}
+                    />
+                    <circle
+                      cx={scaleX(new Date(p.recordedAt).getTime())}
+                      cy={scaleY(p.followersCount)}
+                      r={3.5}
+                      fill="white"
+                      stroke={line.color}
+                      strokeWidth={2}
+                    />
+                  </g>
+                ))}
+              </g>
+            );
+          })}
+
+          {/* Post markers */}
+          {visiblePosts.map((post) => {
+            const postTime = new Date(post.publishedAt).getTime();
+            // Skip posts outside the time range
+            if (postTime < minTime || postTime > maxTime) return null;
+
+            const x = scaleX(postTime);
+            const isHovered = hoveredPost?.id === post.id;
+
+            return (
+              <g
+                key={`post-${post.id}`}
+                style={{ cursor: post.postUrl ? "pointer" : "default" }}
+                onMouseEnter={(e) => handleMarkerHover(post, e)}
+                onMouseLeave={handleMarkerLeave}
+                onClick={() => handleMarkerClick(post)}
+              >
+                {/* Vertical dashed line from marker up to plot area */}
+                <line
+                  x1={x}
+                  y1={markerY}
+                  x2={x}
+                  y2={PAD.top + plotH}
+                  stroke={post.color}
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
+                  opacity={isHovered ? 0.6 : 0.25}
+                />
+                {/* Diamond marker (rotated square) */}
+                <rect
+                  x={x - 4}
+                  y={markerY - 4}
+                  width={8}
+                  height={8}
+                  fill={isHovered ? post.color : post.color}
+                  fillOpacity={isHovered ? 1 : 0.8}
+                  stroke="white"
+                  strokeWidth={1.5}
+                  transform={`rotate(45 ${x} ${markerY})`}
+                />
+                {/* Larger invisible hit area */}
+                <rect
+                  x={x - 8}
+                  y={markerY - 8}
+                  width={16}
+                  height={16}
+                  fill="transparent"
+                />
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* Tooltip */}
+        {hoveredPost && tooltipPos && (
+          <div
+            className="absolute z-10 pointer-events-none bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-[220px]"
+            style={{
+              left: `${tooltipPos.x}px`,
+              top: `${tooltipPos.y - 70}px`,
+              transform: "translateX(-50%)",
+            }}
           >
-            {formatDate(new Date(t).toISOString())}
-          </text>
-        ))}
-
-        {/* Area fills + lines */}
-        {visibleLines.map((line) => {
-          const sortedData = [...line.data].sort(
-            (a, b) =>
-              new Date(a.recordedAt).getTime() -
-              new Date(b.recordedAt).getTime()
-          );
-
-          // Area path
-          const areaPath =
-            `M${scaleX(new Date(sortedData[0].recordedAt).getTime())},${scaleY(sortedData[0].followersCount)}` +
-            sortedData
-              .slice(1)
-              .map(
-                (p) =>
-                  `L${scaleX(new Date(p.recordedAt).getTime())},${scaleY(p.followersCount)}`
-              )
-              .join("") +
-            `L${scaleX(new Date(sortedData[sortedData.length - 1].recordedAt).getTime())},${PAD.top + plotH}` +
-            `L${scaleX(new Date(sortedData[0].recordedAt).getTime())},${PAD.top + plotH}Z`;
-
-          // Line path
-          const linePath =
-            `M${scaleX(new Date(sortedData[0].recordedAt).getTime())},${scaleY(sortedData[0].followersCount)}` +
-            sortedData
-              .slice(1)
-              .map(
-                (p) =>
-                  `L${scaleX(new Date(p.recordedAt).getTime())},${scaleY(p.followersCount)}`
-              )
-              .join("");
-
-          return (
-            <g key={line.channelId}>
-              {/* Gradient area fill */}
-              <path
-                d={areaPath}
-                fill={`url(#area-gradient-${line.channelId})`}
-              />
-              {/* Line */}
-              <path
-                d={linePath}
-                fill="none"
-                stroke={line.color}
-                strokeWidth={2.5}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-              {/* Data points */}
-              {sortedData.map((p, i) => (
-                <g key={i}>
-                  <circle
-                    cx={scaleX(new Date(p.recordedAt).getTime())}
-                    cy={scaleY(p.followersCount)}
-                    r={6}
-                    fill={line.color}
-                    fillOpacity={0.1}
-                  />
-                  <circle
-                    cx={scaleX(new Date(p.recordedAt).getTime())}
-                    cy={scaleY(p.followersCount)}
-                    r={3.5}
-                    fill="white"
-                    stroke={line.color}
-                    strokeWidth={2}
-                  />
-                </g>
-              ))}
-            </g>
-          );
-        })}
-      </svg>
+            <div className="font-medium truncate">
+              {hoveredPost.title || "Untitled post"}
+            </div>
+            <div className="flex items-center gap-2 mt-1 text-gray-300">
+              <span className="capitalize">{hoveredPost.platform}</span>
+              {hoveredPost.viewsCount > 0 && (
+                <span>{formatCount(hoveredPost.viewsCount)} views</span>
+              )}
+              {hoveredPost.likesCount > 0 && (
+                <span>{formatCount(hoveredPost.likesCount)} likes</span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-5 justify-center mt-4 pt-3 border-t border-gray-100">

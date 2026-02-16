@@ -227,8 +227,19 @@ FRONTEND_URL=http://localhost:3000
 ## Documentation References
 
 - `README.md` - Project overview and setup
-- `QUICK_START.md` - 5-minute getting started guide
-- `PROJECT_STRUCTURE.md` - Detailed directory structure
-- `IMPLEMENTATION_SUMMARY.md` - Implementation details
 - `backend/README.md` - Backend-specific documentation
-- `LEMONSQUEEZY_REMOVAL.md` - Why LemonSqueezy was removed
+
+## Custom user instructions
+
+### Java/Spring Boot Standards:
+- Use Java 21+ features (Records, Pattern Matching).
+- Use Constructor Injection only (No @Autowired on fields).
+- Use Lombok @Data or @Value for DTOs.
+- Always include @Valid for request body validation.
+
+### Next.js Interface Sync:
+- Every time you modify a Java Record/DTO, check the corresponding TypeScript interface in /frontend/types/. They MUST match.
+
+### Supabase Auth:
+
+- The backend validates the Supabase JWT via a custom OncePerRequestFilter. Do not attempt to use Node-based Supabase Auth libraries in the Java code.
