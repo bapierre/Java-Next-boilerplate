@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,16 @@ interface ConnectedChannel {
   channelName: string;
   isActive: boolean;
   followerCount?: number | null;
+  linked?: boolean;
+  sourceProjectName?: string | null;
+}
+
+interface LinkableChannel {
+  id: number;
+  platform: string;
+  channelName: string;
+  followerCount?: number | null;
+  sourceProjectName?: string | null;
 }
 
 interface PlatformInfo {
@@ -124,7 +134,12 @@ export function ConnectedSources({
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate leading-tight">
                 {ch.channelName}
-                {!ch.isActive && (
+                {ch.linked && (
+                  <span className="text-blue-500 font-normal ml-1 text-xs">
+                    (linked)
+                  </span>
+                )}
+                {!ch.isActive && !ch.linked && (
                   <span className="text-gray-400 font-normal ml-1 text-xs">
                     (pending)
                   </span>
@@ -184,6 +199,19 @@ export function ConnectPlatformModal({
     null
   );
   const [disconnectingId, setDisconnectingId] = useState<number | null>(null);
+  const [linkableChannels, setLinkableChannels] = useState<LinkableChannel[]>([]);
+  const [linkingId, setLinkingId] = useState<number | null>(null);
+  const [linkableLoading, setLinkableLoading] = useState(true);
+
+  // Fetch linkable channels on mount
+  useEffect(() => {
+    setLinkableLoading(true);
+    apiClient
+      .get<LinkableChannel[]>(`/api/projects/${projectId}/linkable-channels`)
+      .then(setLinkableChannels)
+      .catch((err) => console.error("Failed to fetch linkable channels:", err))
+      .finally(() => setLinkableLoading(false));
+  }, [projectId]);
 
   const getConnectedChannels = (platformKey: string) =>
     connectedChannels.filter((ch) => ch.platform === platformKey);
@@ -201,17 +229,45 @@ export function ConnectPlatformModal({
     }
   };
 
-  const handleDisconnect = async (channelId: number) => {
+  const handleDisconnect = async (channelId: number, isLinked: boolean) => {
     setDisconnectingId(channelId);
     try {
-      await apiClient.delete(
-        `/api/projects/${projectId}/channels/${channelId}`
-      );
+      if (isLinked) {
+        await apiClient.delete(
+          `/api/projects/${projectId}/linked-channels/${channelId}`
+        );
+      } else {
+        await apiClient.delete(
+          `/api/projects/${projectId}/channels/${channelId}`
+        );
+      }
       onChannelChange();
     } catch (err) {
       console.error("Failed to disconnect channel:", err);
     } finally {
       setDisconnectingId(null);
+    }
+  };
+
+  const refreshLinkable = async () => {
+    const updated = await apiClient.get<LinkableChannel[]>(
+      `/api/projects/${projectId}/linkable-channels`
+    );
+    setLinkableChannels(updated);
+  };
+
+  const handleLink = async (channelId: number) => {
+    setLinkingId(channelId);
+    try {
+      await apiClient.post(`/api/projects/${projectId}/channels/link`, {
+        channelId,
+      });
+      onChannelChange();
+      await refreshLinkable();
+    } catch (err) {
+      console.error("Failed to link channel:", err);
+    } finally {
+      setLinkingId(null);
     }
   };
 
@@ -245,7 +301,8 @@ export function ConnectPlatformModal({
           </button>
         </div>
 
-        <div className="p-4 space-y-2">
+        <div className="p-4 space-y-4">
+          <div className="space-y-2">
           {PLATFORMS.map((platform) => {
             const channels = getConnectedChannels(platform.key);
             const hasChannels = channels.length > 0;
@@ -289,7 +346,12 @@ export function ConnectPlatformModal({
                       >
                         <span className="text-sm text-gray-600 truncate">
                           {ch.channelName}
-                          {!ch.isActive && (
+                          {ch.linked && (
+                            <span className="text-blue-500 ml-1 text-xs">
+                              (linked)
+                            </span>
+                          )}
+                          {!ch.isActive && !ch.linked && (
                             <span className="text-gray-400 ml-1">
                               (pending)
                             </span>
@@ -298,11 +360,15 @@ export function ConnectPlatformModal({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDisconnect(ch.id)}
+                          onClick={() => handleDisconnect(ch.id, !!ch.linked)}
                           disabled={disconnectingId === ch.id}
                           className="text-gray-400 hover:text-red-600 h-7 px-2 text-xs"
                         >
-                          {disconnectingId === ch.id ? "..." : "Disconnect"}
+                          {disconnectingId === ch.id
+                            ? "..."
+                            : ch.linked
+                              ? "Unlink"
+                              : "Disconnect"}
                         </Button>
                       </div>
                     ))}
@@ -311,6 +377,61 @@ export function ConnectPlatformModal({
               </div>
             );
           })}
+          </div>
+
+          {/* Link from other projects */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Link from your other projects
+            </p>
+            {linkableLoading ? (
+              <p className="text-xs text-gray-400 py-2">Loading…</p>
+            ) : linkableChannels.length === 0 ? (
+              <p className="text-xs text-gray-400 py-2">
+                No other channels available to link. Connect a platform to
+                another project first.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {linkableChannels.map((ch) => {
+                  const platform = getPlatformInfo(ch.platform);
+                  return (
+                    <div
+                      key={ch.id}
+                      className="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 p-3"
+                    >
+                      {platform && (
+                        <div style={{ color: platform.color }}>
+                          {platform.icon("w-6 h-6")}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 font-medium truncate">
+                          {ch.channelName}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {ch.sourceProjectName
+                            ? `from ${ch.sourceProjectName}`
+                            : platform?.label}
+                          {ch.followerCount != null &&
+                            ` · ${formatFollowers(ch.followerCount)} followers`}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleLink(ch.id)}
+                        disabled={linkingId === ch.id}
+                        className="shrink-0 text-xs h-7 px-3"
+                      >
+                        {linkingId === ch.id ? "..." : "Link"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

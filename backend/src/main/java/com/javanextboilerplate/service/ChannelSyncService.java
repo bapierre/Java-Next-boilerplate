@@ -15,8 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -86,7 +84,9 @@ public class ChannelSyncService {
                 success, failed, channels.size());
     }
 
-    @Transactional
+    // NOTE: No @Transactional here by design — this method makes external HTTP calls (up to 15s each).
+    // Wrapping in a transaction would hold a DB connection for the entire duration, exhausting the pool.
+    // Each repository.save() call below uses its own short-lived transaction.
     public void syncChannel(Channel channel) {
         // Refresh token if expired
         if (channel.isTokenExpired()) {
@@ -427,49 +427,6 @@ public class ChannelSyncService {
                     channel.getPlatform().getValue(), channel.getId(), e.getMessage());
             return Collections.emptyList();
         }
-    }
-
-    private List<RawPost> fetchTwitterPosts(String accessToken) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.twitter.com/2/users/me/tweets?tweet.fields=created_at,public_metrics&max_results=10"))
-                .header("Authorization", "Bearer " + accessToken)
-                .GET()
-                .timeout(Duration.ofSeconds(15))
-                .build();
-
-        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-        JsonNode json = objectMapper.readTree(response.body());
-        JsonNode data = json.path("data");
-
-        if (!data.isArray()) return Collections.emptyList();
-
-        List<RawPost> posts = new ArrayList<>();
-        for (JsonNode tweet : data) {
-            String text = tweet.path("text").asText("");
-            String title = text.length() > 500 ? text.substring(0, 500) : text;
-            JsonNode metrics = tweet.path("public_metrics");
-
-            LocalDateTime publishedAt = null;
-            String createdAt = tweet.path("created_at").asText("");
-            if (!createdAt.isEmpty()) {
-                publishedAt = LocalDateTime.parse(createdAt.replace("Z", "").replace(".000", ""));
-            }
-
-            posts.add(new RawPost(
-                    tweet.path("id").asText(),
-                    title,
-                    null,
-                    "https://twitter.com/i/status/" + tweet.path("id").asText(),
-                    null,
-                    null,
-                    publishedAt,
-                    metrics.path("impression_count").asLong(0),
-                    metrics.path("like_count").asLong(0),
-                    metrics.path("reply_count").asLong(0),
-                    metrics.path("retweet_count").asLong(0)
-            ));
-        }
-        return posts;
     }
 
     private List<RawPost> fetchYouTubePosts(String accessToken) throws Exception {

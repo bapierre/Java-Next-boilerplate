@@ -1,10 +1,21 @@
 package com.javanextboilerplate.controller;
 
 import com.javanextboilerplate.dto.request.CreateProjectRequest;
+import com.javanextboilerplate.dto.request.LinkChannelRequest;
 import com.javanextboilerplate.dto.request.UpdateProjectRequest;
+import com.javanextboilerplate.dto.response.ChannelResponse;
 import com.javanextboilerplate.dto.response.ProjectResponse;
+import com.javanextboilerplate.dto.response.ProjectStatsResponse;
+import com.javanextboilerplate.entity.Channel;
+import com.javanextboilerplate.entity.Platform;
+import com.javanextboilerplate.entity.User;
+import com.javanextboilerplate.repository.ChannelRepository;
+import com.javanextboilerplate.repository.ChannelStatsRepository;
+import com.javanextboilerplate.repository.LinkedChannelRepository;
+import com.javanextboilerplate.repository.SaasProjectRepository;
 import com.javanextboilerplate.security.SupabaseUserDetails;
 import com.javanextboilerplate.service.ProjectService;
+import com.javanextboilerplate.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +24,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -22,6 +35,11 @@ import java.util.List;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final UserService userService;
+    private final SaasProjectRepository projectRepository;
+    private final ChannelStatsRepository channelStatsRepository;
+    private final ChannelRepository channelRepository;
+    private final LinkedChannelRepository linkedChannelRepository;
 
     @GetMapping
     public ResponseEntity<List<ProjectResponse>> listProjects(
@@ -68,6 +86,99 @@ public class ProjectController {
     ) {
         projectService.disconnectChannel(projectId, channelId, userDetails.getUserId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/linkable-channels")
+    public ResponseEntity<List<ChannelResponse>> getLinkableChannels(
+            @PathVariable Long id,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        List<ChannelResponse> channels = projectService.getLinkableChannels(id, userDetails.getUserId());
+        return ResponseEntity.ok(channels);
+    }
+
+    @PostMapping("/{id}/channels/link")
+    public ResponseEntity<Void> linkChannel(
+            @PathVariable Long id,
+            @Valid @RequestBody LinkChannelRequest request,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        projectService.linkChannel(id, request.getChannelId(), userDetails.getUserId());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{projectId}/linked-channels/{channelId}")
+    public ResponseEntity<Void> unlinkChannel(
+            @PathVariable Long projectId,
+            @PathVariable Long channelId,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        projectService.unlinkChannel(projectId, channelId, userDetails.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<ProjectStatsResponse> getProjectStats(
+            @PathVariable Long id,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        User user = userService.getUserBySupabaseId(userDetails.getUserId());
+        projectRepository.findByIdAndUserId(id, user.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        // Collect all channel IDs: owned + linked
+        List<Long> channelIds = getAllChannelIds(id);
+
+        if (channelIds.isEmpty()) {
+            return ResponseEntity.ok(new ProjectStatsResponse(0L, null, List.of(), List.of()));
+        }
+
+        // Get timeline data (aggregated across all channels)
+        List<Object[]> timelineRaw = channelStatsRepository.getFollowerTimelineByChannelIds(channelIds);
+        List<ProjectStatsResponse.TimelinePoint> timeline = timelineRaw.stream()
+                .map(row -> new ProjectStatsResponse.TimelinePoint(
+                        (LocalDateTime) row[0],
+                        (Long) row[1]
+                ))
+                .toList();
+
+        // Get per-platform breakdown
+        List<Object[]> platformRaw = channelRepository.getFollowersByChannelIds(channelIds);
+        List<ProjectStatsResponse.PlatformBreakdown> platforms = platformRaw.stream()
+                .map(row -> new ProjectStatsResponse.PlatformBreakdown(
+                        ((Platform) row[0]).name().toLowerCase(),
+                        (Long) row[1]
+                ))
+                .toList();
+
+        // Compute total followers from platform breakdown
+        long totalFollowers = platforms.stream()
+                .mapToLong(ProjectStatsResponse.PlatformBreakdown::getFollowers)
+                .sum();
+
+        // Compute growth % from timeline
+        Double growthPercent = null;
+        if (timeline.size() >= 2) {
+            long earliest = timeline.getFirst().getTotalFollowers();
+            long latest = timeline.getLast().getTotalFollowers();
+            if (earliest > 0) {
+                growthPercent = ((double) (latest - earliest) / earliest) * 100.0;
+            }
+        }
+
+        return ResponseEntity.ok(new ProjectStatsResponse(totalFollowers, growthPercent, timeline, platforms));
+    }
+
+    private List<Long> getAllChannelIds(Long projectId) {
+        List<Long> ownedIds = channelRepository.findByProjectId(projectId).stream()
+                .map(Channel::getId)
+                .toList();
+        List<Long> linkedIds = linkedChannelRepository.findLinkedChannelsByProjectId(projectId).stream()
+                .map(Channel::getId)
+                .toList();
+        List<Long> allIds = new ArrayList<>(ownedIds);
+        allIds.addAll(linkedIds);
+        return allIds;
     }
 
     @DeleteMapping("/{id}")

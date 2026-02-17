@@ -4,6 +4,7 @@ import com.javanextboilerplate.entity.Channel;
 import com.javanextboilerplate.entity.Platform;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -54,4 +55,20 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
      * Find all active channels across all projects (for scheduled sync)
      */
     List<Channel> findByIsActiveTrue();
+
+    /**
+     * Get follower counts grouped by platform for a project
+     */
+    @Query("SELECT c.platform, c.followerCount " +
+           "FROM Channel c " +
+           "WHERE c.project.id = :projectId AND c.isActive = true AND c.followerCount IS NOT NULL")
+    List<Object[]> getFollowersByPlatform(@Param("projectId") Long projectId);
+
+    /**
+     * Get follower counts grouped by platform for a set of channel IDs (owned + linked)
+     */
+    @Query("SELECT c.platform, c.followerCount " +
+           "FROM Channel c " +
+           "WHERE c.id IN :channelIds AND c.isActive = true AND c.followerCount IS NOT NULL")
+    List<Object[]> getFollowersByChannelIds(@Param("channelIds") List<Long> channelIds);
 }

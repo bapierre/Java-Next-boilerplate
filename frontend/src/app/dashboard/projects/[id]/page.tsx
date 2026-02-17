@@ -10,6 +10,7 @@ import {
   ConnectPlatformModal,
 } from "@/components/dashboard/ChannelCatalog";
 import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
+import PostPerformanceChart from "@/components/dashboard/PostPerformanceChart";
 import type { ProjectResponse } from "@/components/dashboard/ProjectList";
 
 export default function ProjectDetailPage() {
@@ -194,6 +195,14 @@ export default function ProjectDetailPage() {
           projectId={project.id}
           channels={project.channels}
         />
+
+        {/* Post performance comparison */}
+        <div className="mt-8">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
+            Post Comparison
+          </h3>
+          <PostPerformanceChart projectId={project.id} />
+        </div>
 
         {/* Connect platform modal */}
         {showConnectModal && (

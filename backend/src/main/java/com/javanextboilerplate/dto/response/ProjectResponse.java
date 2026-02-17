@@ -1,5 +1,6 @@
 package com.javanextboilerplate.dto.response;
 
+import com.javanextboilerplate.entity.Channel;
 import com.javanextboilerplate.entity.SaasProject;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -37,6 +39,24 @@ public class ProjectResponse {
                 .channels(project.getChannels().stream()
                         .map(ChannelResponse::from)
                         .toList())
+                .createdAt(project.getCreatedAt())
+                .build();
+    }
+
+    public static ProjectResponse from(SaasProject project, List<Channel> linkedChannels) {
+        List<ChannelResponse> allChannels = new ArrayList<>(
+                project.getChannels().stream().map(ChannelResponse::from).toList());
+        allChannels.addAll(linkedChannels.stream().map(ChannelResponse::fromLinked).toList());
+
+        return ProjectResponse.builder()
+                .id(project.getId())
+                .name(project.getName())
+                .description(project.getDescription())
+                .websiteUrl(project.getWebsiteUrl())
+                .imageUrl(project.getImageUrl())
+                .category(project.getCategory())
+                .type(project.getType().getValue())
+                .channels(allChannels)
                 .createdAt(project.getCreatedAt())
                 .build();
     }

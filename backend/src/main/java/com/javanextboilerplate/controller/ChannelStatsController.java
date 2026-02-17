@@ -6,6 +6,7 @@ import com.javanextboilerplate.entity.ChannelStats;
 import com.javanextboilerplate.entity.User;
 import com.javanextboilerplate.repository.ChannelRepository;
 import com.javanextboilerplate.repository.ChannelStatsRepository;
+import com.javanextboilerplate.repository.LinkedChannelRepository;
 import com.javanextboilerplate.repository.SaasProjectRepository;
 import com.javanextboilerplate.security.SupabaseUserDetails;
 import com.javanextboilerplate.service.UserService;
@@ -24,6 +25,7 @@ public class ChannelStatsController {
 
     private final ChannelRepository channelRepository;
     private final ChannelStatsRepository channelStatsRepository;
+    private final LinkedChannelRepository linkedChannelRepository;
     private final SaasProjectRepository projectRepository;
     private final UserService userService;
 
@@ -40,11 +42,13 @@ public class ChannelStatsController {
         projectRepository.findByIdAndUserId(projectId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        // Verify channel belongs to project
+        // Verify channel belongs to project (owned or linked)
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new RuntimeException("Channel not found"));
 
-        if (!channel.getProject().getId().equals(projectId)) {
+        boolean isOwned = channel.getProject().getId().equals(projectId);
+        boolean isLinked = linkedChannelRepository.existsByProjectIdAndChannelId(projectId, channelId);
+        if (!isOwned && !isLinked) {
             return ResponseEntity.notFound().build();
         }
 

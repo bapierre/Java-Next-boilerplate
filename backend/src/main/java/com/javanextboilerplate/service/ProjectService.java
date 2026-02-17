@@ -7,7 +7,10 @@ import com.javanextboilerplate.entity.Channel;
 import com.javanextboilerplate.entity.ProjectType;
 import com.javanextboilerplate.entity.SaasProject;
 import com.javanextboilerplate.entity.User;
+import com.javanextboilerplate.dto.response.ChannelResponse;
+import com.javanextboilerplate.entity.LinkedChannel;
 import com.javanextboilerplate.repository.ChannelRepository;
+import com.javanextboilerplate.repository.LinkedChannelRepository;
 import com.javanextboilerplate.repository.SaasProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +26,7 @@ public class ProjectService {
 
     private final SaasProjectRepository projectRepository;
     private final ChannelRepository channelRepository;
+    private final LinkedChannelRepository linkedChannelRepository;
     private final UserService userService;
     private final ChannelOAuthService channelOAuthService;
 
@@ -49,11 +53,14 @@ public class ProjectService {
         return ProjectResponse.from(saved);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(String supabaseUserId, String email) {
         User user = userService.getOrCreateUser(supabaseUserId, email);
         return projectRepository.findByUserIdWithChannels(user.getId()).stream()
-                .map(ProjectResponse::from)
+                .map(project -> {
+                    List<Channel> linked = linkedChannelRepository.findLinkedChannelsByProjectId(project.getId());
+                    return ProjectResponse.from(project, linked);
+                })
                 .toList();
     }
 
@@ -62,7 +69,8 @@ public class ProjectService {
         User user = userService.getUserBySupabaseId(supabaseUserId);
         SaasProject project = projectRepository.findByIdAndUserIdWithChannels(projectId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
-        return ProjectResponse.from(project);
+        List<Channel> linked = linkedChannelRepository.findLinkedChannelsByProjectId(projectId);
+        return ProjectResponse.from(project, linked);
     }
 
     @Transactional
@@ -123,5 +131,65 @@ public class ProjectService {
                 .orElseThrow(() -> new RuntimeException("Project not found"));
         projectRepository.delete(project);
         log.info("Deleted project '{}' (id={})", project.getName(), project.getId());
+    }
+
+    @Transactional
+    public void linkChannel(Long projectId, Long channelId, String supabaseUserId) {
+        User user = userService.getUserBySupabaseId(supabaseUserId);
+
+        // Verify project ownership
+        SaasProject project = projectRepository.findByIdAndUserId(projectId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        // Verify channel exists and belongs to the same user
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new RuntimeException("Channel not found"));
+        SaasProject sourceProject = projectRepository.findById(channel.getProject().getId())
+                .orElseThrow(() -> new RuntimeException("Source project not found"));
+        if (!sourceProject.getUserId().equals(user.getId())) {
+            throw new RuntimeException("Channel does not belong to this user");
+        }
+
+        // Cannot link a channel to its own project
+        if (channel.getProject().getId().equals(projectId)) {
+            throw new RuntimeException("Channel already belongs to this project");
+        }
+
+        // Prevent duplicate links
+        if (linkedChannelRepository.existsByProjectIdAndChannelId(projectId, channelId)) {
+            throw new RuntimeException("Channel is already linked to this project");
+        }
+
+        LinkedChannel link = LinkedChannel.builder()
+                .projectId(projectId)
+                .channelId(channelId)
+                .build();
+        linkedChannelRepository.save(link);
+        log.info("Linked channel {} to project '{}' (id={})", channelId, project.getName(), projectId);
+    }
+
+    @Transactional
+    public void unlinkChannel(Long projectId, Long channelId, String supabaseUserId) {
+        User user = userService.getUserBySupabaseId(supabaseUserId);
+
+        // Verify project ownership
+        projectRepository.findByIdAndUserId(projectId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        linkedChannelRepository.deleteByProjectIdAndChannelId(projectId, channelId);
+        log.info("Unlinked channel {} from project {}", channelId, projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChannelResponse> getLinkableChannels(Long projectId, String supabaseUserId) {
+        User user = userService.getUserBySupabaseId(supabaseUserId);
+
+        // Verify project ownership
+        projectRepository.findByIdAndUserId(projectId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        return linkedChannelRepository.findLinkableChannels(projectId, user.getId()).stream()
+                .map(ChannelResponse::fromLinked)
+                .toList();
     }
 }

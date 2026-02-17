@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ProjectForm from "./ProjectForm";
+import ProjectStatsCard from "./ProjectStatsCard";
 
 interface ChannelResponse {
   id: number;
@@ -14,6 +15,8 @@ interface ChannelResponse {
   isActive: boolean;
   followerCount?: number | null;
   lastSyncedAt: string | null;
+  linked?: boolean;
+  sourceProjectName?: string | null;
 }
 
 export interface ProjectResponse {
@@ -125,6 +128,10 @@ export default function ProjectList({ email, onSignOut }: ProjectListProps) {
                     </>
                   )}
                 </p>
+                <ProjectStatsCard
+                  projectId={primaryBrand.id}
+                  variant="inline"
+                />
               </div>
             </a>
             <Button variant="outline" size="sm" onClick={onSignOut}>
@@ -343,7 +350,8 @@ export default function ProjectList({ email, onSignOut }: ProjectListProps) {
                         {project.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <ProjectStatsCard projectId={project.id} />
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-2">
                       <span>
                         {project.channels.length}{" "}
                         {project.channels.length === 1

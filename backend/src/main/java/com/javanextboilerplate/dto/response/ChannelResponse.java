@@ -21,6 +21,9 @@ public class ChannelResponse {
     private Boolean isActive;
     private Long followerCount;
     private LocalDateTime lastSyncedAt;
+    @Builder.Default
+    private Boolean linked = false;
+    private String sourceProjectName;
 
     public static ChannelResponse from(Channel channel) {
         return ChannelResponse.builder()
@@ -31,6 +34,20 @@ public class ChannelResponse {
                 .isActive(channel.getIsActive())
                 .followerCount(channel.getFollowerCount())
                 .lastSyncedAt(channel.getLastSyncedAt())
+                .build();
+    }
+
+    public static ChannelResponse fromLinked(Channel channel) {
+        return ChannelResponse.builder()
+                .id(channel.getId())
+                .platform(channel.getPlatform().getValue())
+                .channelName(channel.getChannelName())
+                .channelUrl(channel.getChannelUrl())
+                .isActive(channel.getIsActive())
+                .followerCount(channel.getFollowerCount())
+                .lastSyncedAt(channel.getLastSyncedAt())
+                .linked(true)
+                .sourceProjectName(channel.getProject() != null ? channel.getProject().getName() : null)
                 .build();
     }
 }
