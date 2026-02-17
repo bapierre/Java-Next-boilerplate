@@ -49,22 +49,45 @@ public interface ChannelStatsRepository extends JpaRepository<ChannelStats, Long
     List<Object[]> getFollowerGrowth(Long channelId, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
-     * Get daily total followers across all channels for a project (for sparkline)
+     * Get daily total followers across all channels for a project (for sparkline).
+     * Uses DISTINCT ON to take only the latest snapshot per channel per day before summing,
+     * so repeated syncs on the same day don't inflate the total.
      */
-    @Query("SELECT cs.recordedAt, SUM(cs.followersCount) " +
-           "FROM ChannelStats cs " +
-           "WHERE cs.channel.project.id = :projectId " +
-           "GROUP BY cs.recordedAt " +
-           "ORDER BY cs.recordedAt ASC")
+    @Query(value =
+        "SELECT day, SUM(followers_count) AS total_followers " +
+        "FROM ( " +
+        "  SELECT DISTINCT ON (cs.channel_id, DATE_TRUNC('day', cs.recorded_at)) " +
+        "    cs.channel_id, " +
+        "    DATE_TRUNC('day', cs.recorded_at) AS day, " +
+        "    cs.followers_count " +
+        "  FROM channel_stats cs " +
+        "  JOIN channels c ON cs.channel_id = c.id " +
+        "  WHERE c.project_id = :projectId " +
+        "  ORDER BY cs.channel_id, DATE_TRUNC('day', cs.recorded_at), cs.recorded_at DESC " +
+        ") latest_per_channel_day " +
+        "GROUP BY day " +
+        "ORDER BY day ASC",
+        nativeQuery = true)
     List<Object[]> getProjectFollowerTimeline(@Param("projectId") Long projectId);
 
     /**
-     * Get follower timeline aggregated across a set of channel IDs (owned + linked)
+     * Get follower timeline aggregated across a set of channel IDs (owned + linked).
+     * Uses DISTINCT ON to take only the latest snapshot per channel per day before summing,
+     * so repeated syncs on the same day don't inflate the total.
      */
-    @Query("SELECT cs.recordedAt, SUM(cs.followersCount) " +
-           "FROM ChannelStats cs " +
-           "WHERE cs.channel.id IN :channelIds " +
-           "GROUP BY cs.recordedAt " +
-           "ORDER BY cs.recordedAt ASC")
+    @Query(value =
+        "SELECT day, SUM(followers_count) AS total_followers " +
+        "FROM ( " +
+        "  SELECT DISTINCT ON (channel_id, DATE_TRUNC('day', recorded_at)) " +
+        "    channel_id, " +
+        "    DATE_TRUNC('day', recorded_at) AS day, " +
+        "    followers_count " +
+        "  FROM channel_stats " +
+        "  WHERE channel_id IN :channelIds " +
+        "  ORDER BY channel_id, DATE_TRUNC('day', recorded_at), recorded_at DESC " +
+        ") latest_per_channel_day " +
+        "GROUP BY day " +
+        "ORDER BY day ASC",
+        nativeQuery = true)
     List<Object[]> getFollowerTimelineByChannelIds(@Param("channelIds") List<Long> channelIds);
 }

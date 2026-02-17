@@ -24,7 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -133,21 +133,22 @@ public class ProjectController {
             return ResponseEntity.ok(new ProjectStatsResponse(0L, null, List.of(), List.of()));
         }
 
-        // Get timeline data (aggregated across all channels)
+        // Get timeline data (aggregated by day across all channels)
+        // Native query returns Timestamp for the date column and Long/BigInteger for the sum.
         List<Object[]> timelineRaw = channelStatsRepository.getFollowerTimelineByChannelIds(channelIds);
         List<ProjectStatsResponse.TimelinePoint> timeline = timelineRaw.stream()
                 .map(row -> new ProjectStatsResponse.TimelinePoint(
-                        (LocalDateTime) row[0],
-                        (Long) row[1]
+                        ((Timestamp) row[0]).toLocalDateTime(),
+                        ((Number) row[1]).longValue()
                 ))
                 .toList();
 
-        // Get per-platform breakdown
+        // Get per-platform breakdown (JPQL query, returns Platform enum + Long directly)
         List<Object[]> platformRaw = channelRepository.getFollowersByChannelIds(channelIds);
         List<ProjectStatsResponse.PlatformBreakdown> platforms = platformRaw.stream()
                 .map(row -> new ProjectStatsResponse.PlatformBreakdown(
                         ((Platform) row[0]).name().toLowerCase(),
-                        (Long) row[1]
+                        ((Number) row[1]).longValue()
                 ))
                 .toList();
 
