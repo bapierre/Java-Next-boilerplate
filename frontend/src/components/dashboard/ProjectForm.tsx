@@ -52,6 +52,7 @@ export default function ProjectForm({
   const [websiteUrl, setWebsiteUrl] = useState(project?.websiteUrl ?? "");
   const [imageUrl, setImageUrl] = useState(project?.imageUrl ?? "");
   const [category, setCategory] = useState(project?.category ?? "");
+  const [mrr, setMrr] = useState(project?.mrr != null ? String(project.mrr) : "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,6 +83,7 @@ export default function ProjectForm({
         imageUrl: normalizeUrl(imageUrl),
         category: category || null,
         type: effectiveType,
+        mrr: mrr.trim() !== "" ? parseFloat(mrr) : null,
       };
 
       if (isEditing) {
@@ -162,6 +164,24 @@ export default function ProjectForm({
               className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 mt-1"
             />
           </div>
+
+          {isEditing && (
+            <div>
+              <Label htmlFor="mrr" className="text-gray-700">
+                MRR (Monthly Recurring Revenue) <span className="text-gray-400 font-normal">in USD</span>
+              </Label>
+              <Input
+                id="mrr"
+                type="number"
+                min="0"
+                step="0.01"
+                value={mrr}
+                onChange={(e) => setMrr(e.target.value)}
+                placeholder="e.g. 1500"
+                className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 mt-1"
+              />
+            </div>
+          )}
 
           <div>
             <Label htmlFor="category" className="text-gray-700">

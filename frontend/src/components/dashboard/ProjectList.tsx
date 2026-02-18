@@ -27,6 +27,7 @@ export interface ProjectResponse {
   imageUrl: string | null;
   category: string | null;
   type?: string;
+  mrr?: number | null;
   channels: ChannelResponse[];
   createdAt: string;
 }

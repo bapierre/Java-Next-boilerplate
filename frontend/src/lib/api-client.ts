@@ -74,6 +74,26 @@ export const apiClient = {
     return response.json();
   },
 
+  async patch<T = unknown>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+      signal: createAbortSignal(DEFAULT_TIMEOUT),
+    });
+
+    if (response.status === 401) handleUnauthorized();
+
+    if (!response.ok) {
+      throw new Error(getErrorMessage(response.status));
+    }
+
+    return response.json();
+  },
+
   async delete(endpoint: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "DELETE",

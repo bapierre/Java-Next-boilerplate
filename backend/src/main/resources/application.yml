@@ -19,7 +19,8 @@ spring:
       max-lifetime: 600000        # 10 min — Supabase closes idle connections before 29min
       idle-timeout: 300000        # 5 min — must be less than max-lifetime
       keepalive-time: 30000       # Ping idle connections every 30s to prevent staleness
-      leak-detection-threshold: 60000
+      leak-detection-threshold: 120000  # 2 min — Flyway holds a connection during migrations
+      connection-init-sql: "SET statement_timeout = 0"  # Override Supabase's role-level timeout
 
   jpa:
     open-in-view: false           # Don't hold a DB connection for the full HTTP request lifecycle

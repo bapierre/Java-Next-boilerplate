@@ -97,6 +97,9 @@ public class ProjectService {
         if (request.getType() != null) {
             project.setType(ProjectType.fromValue(request.getType()));
         }
+        if (request.getMrr() != null) {
+            project.setMrr(request.getMrr());
+        }
 
         SaasProject saved = projectRepository.save(project);
         log.info("Updated project '{}' (id={})", saved.getName(), saved.getId());

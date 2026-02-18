@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ public class ProjectResponse {
     private String imageUrl;
     private String category;
     private String type;
+    private BigDecimal mrr;
     private List<ChannelResponse> channels;
     private LocalDateTime createdAt;
 
@@ -36,6 +38,7 @@ public class ProjectResponse {
                 .imageUrl(project.getImageUrl())
                 .category(project.getCategory())
                 .type(project.getType().getValue())
+                .mrr(project.getMrr())
                 .channels(project.getChannels().stream()
                         .map(ChannelResponse::from)
                         .toList())
@@ -56,6 +59,7 @@ public class ProjectResponse {
                 .imageUrl(project.getImageUrl())
                 .category(project.getCategory())
                 .type(project.getType().getValue())
+                .mrr(project.getMrr())
                 .channels(allChannels)
                 .createdAt(project.getCreatedAt())
                 .build();

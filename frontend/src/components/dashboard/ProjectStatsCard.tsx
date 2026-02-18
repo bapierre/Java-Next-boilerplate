@@ -3,17 +3,17 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 
-interface TimelinePoint {
+export interface TimelinePoint {
   date: string;
   totalFollowers: number;
 }
 
-interface PlatformBreakdown {
+export interface PlatformBreakdown {
   platform: string;
   followers: number;
 }
 
-interface ProjectStatsData {
+export interface ProjectStatsData {
   totalFollowers: number;
   growthPercent: number | null;
   timeline: TimelinePoint[];
@@ -28,13 +28,13 @@ const PLATFORM_COLORS: Record<string, string> = {
   facebook: "#1877F2",
 };
 
-function formatFollowers(n: number): string {
+export function formatFollowers(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
 }
 
-function Sparkline({ data }: { data: TimelinePoint[] }) {
+export function Sparkline({ data }: { data: TimelinePoint[] }) {
   if (data.length < 2) return null;
 
   const values = data.map((d) => d.totalFollowers);
@@ -70,7 +70,7 @@ function Sparkline({ data }: { data: TimelinePoint[] }) {
   );
 }
 
-function PlatformBar({ platforms }: { platforms: PlatformBreakdown[] }) {
+export function PlatformBar({ platforms }: { platforms: PlatformBreakdown[] }) {
   const total = platforms.reduce((sum, p) => sum + p.followers, 0);
   if (total === 0) return null;
 

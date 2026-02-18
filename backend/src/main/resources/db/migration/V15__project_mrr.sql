@@ -1,0 +1,1 @@
+ALTER TABLE saas_projects ADD COLUMN IF NOT EXISTS mrr NUMERIC(12, 2);

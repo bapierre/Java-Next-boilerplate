@@ -1,9 +1,12 @@
 package com.javanextboilerplate.dto.request;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
@@ -26,4 +29,7 @@ public class UpdateProjectRequest {
 
     @Size(max = 50, message = "Type must be 50 characters or less")
     private String type;
+
+    @DecimalMin(value = "0.0", message = "MRR must be a positive value")
+    private BigDecimal mrr;
 }
