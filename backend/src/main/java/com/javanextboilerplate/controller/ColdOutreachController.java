@@ -85,6 +85,17 @@ public class ColdOutreachController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PutMapping("/templates/{templateId}")
+    public ResponseEntity<OutreachTemplateResponse> updateTemplate(
+            @PathVariable Long projectId,
+            @PathVariable Long templateId,
+            @Valid @RequestBody CreateOutreachTemplateRequest request,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(
+                outreachService.updateTemplate(projectId, templateId, userDetails.getUserId(), request));
+    }
+
     @DeleteMapping("/templates/{templateId}")
     public ResponseEntity<Void> deleteTemplate(
             @PathVariable Long projectId,

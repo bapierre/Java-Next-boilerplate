@@ -47,6 +47,10 @@ public class ColdOutreach {
     @Builder.Default
     private String status = "ONGOING";
 
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String type = "COLD";
+
     @Column(name = "contacted_at", nullable = false)
     @Builder.Default
     private LocalDateTime contactedAt = LocalDateTime.now();

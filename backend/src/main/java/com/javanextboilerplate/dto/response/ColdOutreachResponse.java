@@ -19,6 +19,7 @@ public class ColdOutreachResponse {
     private String messageSent;
     private String notes;
     private String status;
+    private String type;
     private LocalDateTime contactedAt;
     private LocalDateTime createdAt;
 
@@ -33,6 +34,7 @@ public class ColdOutreachResponse {
                 .messageSent(o.getMessageSent())
                 .notes(o.getNotes())
                 .status(o.getStatus())
+                .type(o.getType())
                 .contactedAt(o.getContactedAt())
                 .createdAt(o.getCreatedAt())
                 .build();

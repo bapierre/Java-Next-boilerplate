@@ -19,4 +19,7 @@ public class CreateColdOutreachRequest {
     private String messageSent;
 
     private String notes;
+
+    /** "WARM" or "COLD" — defaults to "COLD" when absent */
+    private String type;
 }

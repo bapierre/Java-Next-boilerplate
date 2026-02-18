@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.util.List;
 
 @Service
@@ -33,7 +35,7 @@ public class ColdOutreachService {
     @Transactional(readOnly = true)
     public List<ColdOutreachResponse> getOutreaches(Long projectId, String supabaseUserId) {
         verifyOwnership(projectId, supabaseUserId);
-        return outreachRepository.findByProjectIdOrderByContactedAtDesc(projectId).stream()
+        return outreachRepository.findByProjectIdOrderByContactedAtDesc(projectId, PageRequest.of(0, 1_000)).stream()
                 .map(ColdOutreachResponse::from)
                 .toList();
     }
@@ -52,6 +54,10 @@ public class ColdOutreachService {
                     "You already have an outreach entry for @" + handle + " on " + platform);
         }
 
+        String type = (request.getType() != null && !request.getType().isBlank())
+                ? request.getType().toUpperCase()
+                : "COLD";
+
         ColdOutreach outreach = ColdOutreach.builder()
                 .projectId(projectId)
                 .platform(platform)
@@ -61,6 +67,7 @@ public class ColdOutreachService {
                 .messageSent(request.getMessageSent())
                 .notes(request.getNotes())
                 .status("ONGOING")
+                .type(type)
                 .build();
 
         ColdOutreach saved = outreachRepository.save(outreach);
@@ -118,6 +125,19 @@ public class ColdOutreachService {
 
         OutreachTemplate saved = templateRepository.save(template);
         log.info("Created outreach template '{}' for project {}", request.getName(), projectId);
+        return OutreachTemplateResponse.from(saved);
+    }
+
+    @Transactional
+    public OutreachTemplateResponse updateTemplate(Long projectId, Long templateId,
+                                                   String supabaseUserId, CreateOutreachTemplateRequest request) {
+        verifyOwnership(projectId, supabaseUserId);
+        OutreachTemplate template = templateRepository.findByIdAndProjectId(templateId, projectId)
+                .orElseThrow(() -> new RuntimeException("Template not found"));
+        template.setName(request.getName());
+        template.setContent(request.getContent());
+        OutreachTemplate saved = templateRepository.save(template);
+        log.info("Updated outreach template '{}' (id={}) for project {}", request.getName(), templateId, projectId);
         return OutreachTemplateResponse.from(saved);
     }
 
