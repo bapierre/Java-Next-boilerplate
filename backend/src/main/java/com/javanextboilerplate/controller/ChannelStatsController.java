@@ -2,7 +2,6 @@ package com.javanextboilerplate.controller;
 
 import com.javanextboilerplate.dto.response.ChannelStatsResponse;
 import com.javanextboilerplate.entity.Channel;
-import com.javanextboilerplate.entity.ChannelStats;
 import com.javanextboilerplate.entity.User;
 import com.javanextboilerplate.repository.ChannelRepository;
 import com.javanextboilerplate.repository.ChannelStatsRepository;
@@ -15,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -53,11 +53,14 @@ public class ChannelStatsController {
         }
 
         LocalDateTime since = LocalDateTime.now().minusDays(days);
-        List<ChannelStats> stats = channelStatsRepository
-                .findByChannelIdAndRecordedAtBetweenOrderByRecordedAtAsc(channelId, since, LocalDateTime.now());
+        List<Object[]> raw = channelStatsRepository
+                .findDailySnapshotsByChannelId(channelId, since, LocalDateTime.now());
 
-        List<ChannelStatsResponse> response = stats.stream()
-                .map(ChannelStatsResponse::from)
+        List<ChannelStatsResponse> response = raw.stream()
+                .map(row -> new ChannelStatsResponse(
+                        ((Timestamp) row[0]).toLocalDateTime(),
+                        ((Number) row[1]).longValue()
+                ))
                 .toList();
 
         return ResponseEntity.ok(response);

@@ -176,20 +176,38 @@ public class ChannelOAuthService {
         String channelId = !"unknown".equals(userInfo.platformUserId) ? userInfo.platformUserId
                 : (tokens.platformUserId != null ? tokens.platformUserId : "unknown");
 
-        Channel channel = Channel.builder()
-                .project(project)
-                .platform(platform)
-                .channelName(userInfo.displayName)
-                .channelId(channelId)
-                .channelUrl(userInfo.profileUrl)
-                .accessToken(tokens.accessToken)
-                .refreshToken(tokens.refreshToken)
-                .tokenExpiresAt(tokens.expiresAt)
-                .followerCount(userInfo.followerCount)
-                .isActive(true)
-                .build();
+        // Upsert: reactivate existing channel (e.g. previously marked inactive) rather than failing
+        // with a unique constraint violation on (project_id, platform, channel_id).
+        Channel channel = channelRepository
+                .findByProjectIdAndPlatformAndChannelId(project.getId(), platform, channelId)
+                .orElse(null);
 
-        channelRepository.save(channel);
+        if (channel != null) {
+            channel.setChannelName(userInfo.displayName);
+            channel.setChannelUrl(userInfo.profileUrl);
+            channel.setAccessToken(tokens.accessToken);
+            channel.setRefreshToken(tokens.refreshToken);
+            channel.setTokenExpiresAt(tokens.expiresAt);
+            channel.setFollowerCount(userInfo.followerCount);
+            channel.setIsActive(true);
+            log.info("Reactivating existing {} channel {} on project {}",
+                    platform.getValue(), channel.getId(), projectId);
+        } else {
+            channel = Channel.builder()
+                    .project(project)
+                    .platform(platform)
+                    .channelName(userInfo.displayName)
+                    .channelId(channelId)
+                    .channelUrl(userInfo.profileUrl)
+                    .accessToken(tokens.accessToken)
+                    .refreshToken(tokens.refreshToken)
+                    .tokenExpiresAt(tokens.expiresAt)
+                    .followerCount(userInfo.followerCount)
+                    .isActive(true)
+                    .build();
+        }
+
+        final Channel savedChannel = channelRepository.save(channel);
         log.info("OAuth completed for {} — connected '{}' on project {}",
                 platform.getValue(), userInfo.displayName, projectId);
 
@@ -198,9 +216,9 @@ public class ChannelOAuthService {
             @Override
             public void afterCommit() {
                 try {
-                    channelSyncService.syncChannel(channel);
+                    channelSyncService.syncChannel(savedChannel);
                 } catch (Exception e) {
-                    log.warn("Initial sync failed for new channel {} (non-fatal): {}", channel.getId(), e.getMessage());
+                    log.warn("Initial sync failed for new channel {} (non-fatal): {}", savedChannel.getId(), e.getMessage());
                 }
             }
         });

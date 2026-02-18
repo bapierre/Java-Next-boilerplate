@@ -160,6 +160,9 @@ public class ChannelSyncService {
                 .build();
 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
         JsonNode json = objectMapper.readTree(response.body());
         return json.path("data").path("public_metrics").path("followers_count").asLong(0);
     }
@@ -173,6 +176,9 @@ public class ChannelSyncService {
                 .build();
 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
         JsonNode json = objectMapper.readTree(response.body());
         JsonNode items = json.path("items");
         if (items.isArray() && !items.isEmpty()) {
@@ -190,7 +196,14 @@ public class ChannelSyncService {
                 .build();
 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
         JsonNode json = objectMapper.readTree(response.body());
+        JsonNode errorCode = json.path("error").path("code");
+        if (!errorCode.isMissingNode() && !"ok".equals(errorCode.asText())) {
+            throw new RuntimeException("TikTok error " + errorCode.asText() + ": " + response.body());
+        }
         return json.path("data").path("user").path("follower_count").asLong(0);
     }
 
@@ -205,6 +218,9 @@ public class ChannelSyncService {
                 .build();
 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
         JsonNode json = objectMapper.readTree(response.body());
         return json.path("followers_count").asLong(0);
     }
@@ -220,6 +236,9 @@ public class ChannelSyncService {
                 .build();
 
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
         JsonNode json = objectMapper.readTree(response.body());
         JsonNode data = json.path("data");
         if (data.isArray() && !data.isEmpty()) {
@@ -266,7 +285,11 @@ public class ChannelSyncService {
         JsonNode json = objectMapper.readTree(response.body());
 
         String newAccessToken = json.path("access_token").asText("");
-        if (newAccessToken.isEmpty()) return false;
+        if (newAccessToken.isEmpty()) {
+            log.warn("Twitter token refresh failed for channel {} [HTTP {}]: {}",
+                    channel.getId(), response.statusCode(), response.body());
+            return false;
+        }
 
         channel.setAccessToken(newAccessToken);
         String newRefreshToken = json.path("refresh_token").asText("");
@@ -300,7 +323,11 @@ public class ChannelSyncService {
         JsonNode json = objectMapper.readTree(response.body());
 
         String newAccessToken = json.path("access_token").asText("");
-        if (newAccessToken.isEmpty()) return false;
+        if (newAccessToken.isEmpty()) {
+            log.warn("YouTube token refresh failed for channel {} [HTTP {}]: {}",
+                    channel.getId(), response.statusCode(), response.body());
+            return false;
+        }
 
         channel.setAccessToken(newAccessToken);
         long expiresIn = json.path("expires_in").asLong(3600);
@@ -330,7 +357,11 @@ public class ChannelSyncService {
         JsonNode json = objectMapper.readTree(response.body());
 
         String newAccessToken = json.path("access_token").asText("");
-        if (newAccessToken.isEmpty()) return false;
+        if (newAccessToken.isEmpty()) {
+            log.warn("TikTok token refresh failed for channel {} [HTTP {}]: {}",
+                    channel.getId(), response.statusCode(), response.body());
+            return false;
+        }
 
         channel.setAccessToken(newAccessToken);
         String newRefreshToken = json.path("refresh_token").asText("");

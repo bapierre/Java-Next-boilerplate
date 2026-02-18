@@ -71,6 +71,23 @@ public interface ChannelStatsRepository extends JpaRepository<ChannelStats, Long
     List<Object[]> getProjectFollowerTimeline(@Param("projectId") Long projectId);
 
     /**
+     * Get one snapshot per day for a channel (latest recorded_at wins).
+     * Uses DISTINCT ON to deduplicate multiple syncs within the same day.
+     */
+    @Query(value =
+        "SELECT DISTINCT ON (DATE_TRUNC('day', recorded_at)) " +
+        "  DATE_TRUNC('day', recorded_at) AS day, followers_count " +
+        "FROM channel_stats " +
+        "WHERE channel_id = :channelId AND recorded_at BETWEEN :startDate AND :endDate " +
+        "ORDER BY DATE_TRUNC('day', recorded_at), recorded_at DESC",
+        nativeQuery = true)
+    List<Object[]> findDailySnapshotsByChannelId(
+        @Param("channelId") Long channelId,
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate
+    );
+
+    /**
      * Get follower timeline aggregated across a set of channel IDs (owned + linked).
      * Uses DISTINCT ON to take only the latest snapshot per channel per day before summing,
      * so repeated syncs on the same day don't inflate the total.

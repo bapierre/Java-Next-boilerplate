@@ -56,12 +56,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     /**
      * Find posts across all channels for a project within a date range
      */
-    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.stats WHERE p.channel.project.id = :projectId AND p.publishedAt >= :since ORDER BY p.publishedAt DESC")
+    @Query("SELECT p FROM Post p JOIN FETCH p.channel LEFT JOIN FETCH p.stats WHERE p.channel.project.id = :projectId AND p.publishedAt >= :since ORDER BY p.publishedAt DESC")
     List<Post> findByProjectIdAndPublishedAfter(@Param("projectId") Long projectId, @Param("since") LocalDateTime since);
 
     /**
      * Find posts across a set of channel IDs (owned + linked) within a date range
      */
-    @Query("SELECT p FROM Post p LEFT JOIN FETCH p.stats WHERE p.channel.id IN :channelIds AND p.publishedAt >= :since ORDER BY p.publishedAt DESC")
+    @Query("SELECT p FROM Post p JOIN FETCH p.channel LEFT JOIN FETCH p.stats WHERE p.channel.id IN :channelIds AND p.publishedAt >= :since ORDER BY p.publishedAt DESC")
     List<Post> findByChannelIdsAndPublishedAfter(@Param("channelIds") List<Long> channelIds, @Param("since") LocalDateTime since);
 }
