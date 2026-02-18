@@ -55,7 +55,7 @@ export default function PostPerformanceChart({ projectId }: PostPerformanceChart
     setLoading(true);
     apiClient
       .get<PostData[]>(`/api/projects/${projectId}/posts?days=${days}`)
-      .then((data) => { if (!cancelled) { setPosts(data); setLoading(false); } })
+      .then((data) => { if (!cancelled) { if (data) setPosts(data); setLoading(false); } })
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [projectId, days]);

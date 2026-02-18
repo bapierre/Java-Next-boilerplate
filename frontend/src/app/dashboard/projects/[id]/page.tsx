@@ -12,6 +12,8 @@ import {
 import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import PostPerformanceChart from "@/components/dashboard/PostPerformanceChart";
 import ColdOutreachBoard from "@/components/dashboard/ColdOutreachBoard";
+import SeoBoard from "@/components/dashboard/SeoBoard";
+import AffiliateBoard from "@/components/dashboard/AffiliateBoard";
 import {
   Sparkline,
   PlatformBar,
@@ -22,7 +24,11 @@ import type { ProjectResponse } from "@/components/dashboard/ProjectList";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Segment = "social" | "outreach" | null;
+type Segment = "social" | "outreach" | "seo" | "affiliate" | null;
+
+interface SeoAuditSummary {
+  score: number;
+}
 
 interface OutreachEntry {
   id: number;
@@ -137,10 +143,14 @@ function SegmentSelector({
   onSelect,
   stats,
   outreaches,
+  seoScore,
+  affiliateClicks,
 }: {
   onSelect: (segment: Segment) => void;
   stats: ProjectStatsData | null;
   outreaches: OutreachEntry[];
+  seoScore: number | null;
+  affiliateClicks: number | null;
 }) {
   const now = new Date();
   const thisMonth = outreaches.filter((o) => {
@@ -246,11 +256,66 @@ function SegmentSelector({
       {/* Paid Ads — disabled */}
       <ComingSoonCard title="Paid Ads" description="Track ad spend, ROAS, and campaign performance." />
 
-      {/* SEO — disabled */}
-      <ComingSoonCard title="SEO" description="Track keyword rankings, backlinks, and organic traffic." />
+      {/* SEO — active */}
+      <button
+        onClick={() => onSelect("seo")}
+        className="text-left p-5 bg-white border border-gray-200 rounded-2xl hover:border-purple-400 hover:shadow-sm transition-all group cursor-pointer"
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Segment</p>
+            <h3 className="text-base font-bold text-gray-900 group-hover:text-purple-700 transition-colors">SEO</h3>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+            className="w-5 h-5 text-gray-300 group-hover:text-purple-400 transition-colors mt-0.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </div>
+        {seoScore !== null ? (
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-2xl font-bold ${
+                seoScore >= 75 ? "text-green-600" : seoScore >= 50 ? "text-amber-500" : "text-red-500"
+              }`}
+            >
+              {seoScore}
+            </span>
+            <div>
+              <p className="text-xs font-medium text-gray-600">
+                {seoScore >= 75 ? "Good" : seoScore >= 50 ? "Needs work" : "Poor"}
+              </p>
+              <p className="text-[10px] text-gray-400">SEO score / 100</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">Audit your website for on-page SEO issues across 16 factors</p>
+        )}
+      </button>
 
-      {/* Affiliate Marketing — disabled */}
-      <ComingSoonCard title="Affiliate Marketing" description="Manage partners, commissions, and conversion tracking." />
+      {/* Affiliate Marketing — active */}
+      <button
+        onClick={() => onSelect("affiliate")}
+        className="text-left p-5 bg-white border border-gray-200 rounded-2xl hover:border-purple-400 hover:shadow-sm transition-all group cursor-pointer"
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Segment</p>
+            <h3 className="text-base font-bold text-gray-900 group-hover:text-purple-700 transition-colors">Affiliate Marketing</h3>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+            className="w-5 h-5 text-gray-300 group-hover:text-purple-400 transition-colors mt-0.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </div>
+        {affiliateClicks !== null && affiliateClicks > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-gray-900">{affiliateClicks.toLocaleString()}</span>
+            <p className="text-xs text-gray-400">total clicks</p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">Track affiliate link clicks and sources</p>
+        )}
+      </button>
     </div>
   );
 }
@@ -271,6 +336,8 @@ export default function ProjectDetailPage() {
   const [segment, setSegment]               = useState<Segment>(null);
   const [stats, setStats]                   = useState<ProjectStatsData | null>(null);
   const [outreaches, setOutreaches]         = useState<OutreachEntry[]>([]);
+  const [seoScore, setSeoScore]             = useState<number | null>(null);
+  const [affiliateClicks, setAffiliateClicks] = useState<number | null>(null);
 
   const fetchProject = async () => {
     try {
@@ -287,7 +354,18 @@ export default function ProjectDetailPage() {
     fetchProject();
     // Prefetch stats for the social media segment preview
     apiClient.get<ProjectStatsData>(`/api/projects/${projectId}/stats`)
-      .then(setStats).catch(() => {});
+      .then((d) => { if (d) setStats(d); }).catch(() => {});
+    // Prefetch latest SEO score for the segment card
+    apiClient.get<SeoAuditSummary>(`/api/projects/${projectId}/seo/audit`)
+      .then((d) => { if (d) setSeoScore(d.score); }).catch(() => {});
+    // Prefetch affiliate click total for the segment card
+    apiClient.get<{ id: number; totalClicks: number }[]>(`/api/projects/${projectId}/affiliate/campaigns`)
+      .then((d) => {
+        if (d) {
+          const total = d.reduce((s, c) => s + c.totalClicks, 0);
+          setAffiliateClicks(total);
+        }
+      }).catch(() => {});
   }, [projectId]);
 
   // Personal brands only have social media — go straight to that view
@@ -298,7 +376,7 @@ export default function ProjectDetailPage() {
       setSegment("social");
     } else {
       apiClient.get<OutreachEntry[]>(`/api/projects/${projectId}/outreach`)
-        .then(setOutreaches).catch(() => {});
+        .then((d) => { if (d) setOutreaches(d); }).catch(() => {});
     }
   }, [project?.type]);
 
@@ -441,6 +519,8 @@ export default function ProjectDetailPage() {
             onSelect={setSegment}
             stats={stats}
             outreaches={outreaches}
+            seoScore={seoScore}
+            affiliateClicks={affiliateClicks}
           />
         )}
 
@@ -488,6 +568,18 @@ export default function ProjectDetailPage() {
 
             {segment === "outreach" && (
               <ColdOutreachBoard projectId={project.id} />
+            )}
+
+            {segment === "seo" && (
+              <SeoBoard
+                projectId={project.id}
+                websiteUrl={project.websiteUrl}
+                onScoreChange={setSeoScore}
+              />
+            )}
+
+            {segment === "affiliate" && (
+              <AffiliateBoard projectId={project.id} />
             )}
           </div>
         )}

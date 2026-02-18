@@ -49,7 +49,7 @@ export default function ProjectList({ email, onSignOut }: ProjectListProps) {
     try {
       setError(null);
       const data = await apiClient.get<ProjectResponse[]>("/api/projects");
-      setProjects(data);
+      if (data) setProjects(data);
     } catch (err) {
       console.error("Failed to fetch projects:", err);
       setError(

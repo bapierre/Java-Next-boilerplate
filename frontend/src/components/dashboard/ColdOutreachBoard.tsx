@@ -1128,8 +1128,8 @@ export default function ColdOutreachBoard({ projectId }: { projectId: number }) 
       apiClient.get<ColdOutreach[]>(`/api/projects/${projectId}/outreach`),
       apiClient.get<OutreachTemplate[]>(`/api/projects/${projectId}/outreach/templates`),
     ]).then(([o, t]) => {
-      setOutreaches(o);
-      setTemplates(t);
+      if (o) setOutreaches(o);
+      if (t) setTemplates(t);
     }).finally(() => setLoading(false));
   }, [projectId]);
 

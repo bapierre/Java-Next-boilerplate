@@ -95,7 +95,7 @@ export default function FollowerChart({
           const color = info?.color ?? "#6b7280";
           platformColorMap.set(ch.platform, { color, channelName: ch.channelName });
 
-          if (data.length > 0) {
+          if (data && data.length > 0) {
             results.push({
               channelId: ch.id,
               platform: ch.platform,
@@ -124,7 +124,7 @@ export default function FollowerChart({
         }[]>(`/api/projects/${projectId}/posts?days=${days}`);
         if (cancelled) return;
 
-        postMarkers = postData.map((p) => ({
+        postMarkers = (postData ?? []).map((p) => ({
           ...p,
           color: platformColorMap.get(p.platform)?.color ?? getPlatformInfo(p.platform)?.color ?? "#6b7280",
         }));

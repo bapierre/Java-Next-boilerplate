@@ -35,7 +35,7 @@ export const apiClient = {
     return response.json();
   },
 
-  async get<T = unknown>(endpoint: string): Promise<T> {
+  async get<T = unknown>(endpoint: string): Promise<T | null> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "GET",
       headers: {
@@ -50,6 +50,8 @@ export const apiClient = {
     if (!response.ok) {
       throw new Error(getErrorMessage(response.status));
     }
+
+    if (response.status === 204) return null;
 
     return response.json();
   },

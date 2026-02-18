@@ -43,6 +43,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/webhooks/**").permitAll()
                         // OAuth callbacks are browser redirects without JWT cookie
                         .requestMatchers("/api/channels/oauth/*/callback").permitAll()
+                        // Affiliate tracking redirects are public (no auth needed)
+                        .requestMatchers("/t/**").permitAll()
+                        // Spring error dispatch (triggered internally by sendError)
+                        .requestMatchers("/error").permitAll()
                         // Health check - only expose health endpoint
                         .requestMatchers("/actuator/health", "/health", "/").permitAll()
                         // Restrict all other actuator endpoints

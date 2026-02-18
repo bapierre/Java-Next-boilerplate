@@ -208,7 +208,7 @@ export function ConnectPlatformModal({
     setLinkableLoading(true);
     apiClient
       .get<LinkableChannel[]>(`/api/projects/${projectId}/linkable-channels`)
-      .then(setLinkableChannels)
+      .then((d) => { if (d) setLinkableChannels(d); })
       .catch((err) => console.error("Failed to fetch linkable channels:", err))
       .finally(() => setLinkableLoading(false));
   }, [projectId]);
@@ -222,7 +222,7 @@ export function ConnectPlatformModal({
       const data = await apiClient.get<{ authorizationUrl: string }>(
         `/api/channels/oauth/${platformKey}/authorize?projectId=${projectId}`
       );
-      window.location.href = data.authorizationUrl;
+      if (data) window.location.href = data.authorizationUrl;
     } catch (err) {
       console.error("Failed to start OAuth flow:", err);
       setConnectingPlatform(null);
@@ -253,7 +253,7 @@ export function ConnectPlatformModal({
     const updated = await apiClient.get<LinkableChannel[]>(
       `/api/projects/${projectId}/linkable-channels`
     );
-    setLinkableChannels(updated);
+    if (updated) setLinkableChannels(updated);
   };
 
   const handleLink = async (channelId: number) => {

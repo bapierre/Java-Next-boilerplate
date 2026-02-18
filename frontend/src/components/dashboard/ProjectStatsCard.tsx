@@ -124,7 +124,7 @@ export default function ProjectStatsCard({
   useEffect(() => {
     apiClient
       .get<ProjectStatsData>(`/api/projects/${projectId}/stats`)
-      .then(setStats)
+      .then((d) => { if (d) setStats(d); })
       .catch(() => {});
   }, [projectId]);
 
