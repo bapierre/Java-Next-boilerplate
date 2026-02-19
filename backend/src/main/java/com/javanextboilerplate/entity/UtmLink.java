@@ -47,6 +47,9 @@ public class UtmLink {
     @Column(nullable = false, length = 50, unique = true)
     private String slug;
 
+    @Column(name = "campaign_id")
+    private Long campaignId;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;

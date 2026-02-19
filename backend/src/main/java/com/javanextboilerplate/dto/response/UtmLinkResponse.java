@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class UtmLinkResponse {
     Long id;
+    Long campaignId;
     String name;
     String destinationUrl;
     String utmSource;
@@ -26,6 +27,7 @@ public class UtmLinkResponse {
     public static UtmLinkResponse from(UtmLink link, long totalClicks) {
         return UtmLinkResponse.builder()
                 .id(link.getId())
+                .campaignId(link.getCampaignId())
                 .name(link.getName())
                 .destinationUrl(link.getDestinationUrl())
                 .utmSource(link.getUtmSource())

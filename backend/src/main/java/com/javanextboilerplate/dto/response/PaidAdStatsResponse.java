@@ -17,6 +17,9 @@ public class PaidAdStatsResponse {
     double cpc;
     double cpa;
     double ctr;
+    // UTM-tracked clicks for linked UTM links (auto-populated, no manual input needed)
+    long utmTotalClicks;
+    long utmUniqueClicks;
 
     @Value
     @Builder

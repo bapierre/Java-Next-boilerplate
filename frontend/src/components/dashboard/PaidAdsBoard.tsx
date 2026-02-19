@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import AdSimulator from "./AdSimulator";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -45,10 +47,13 @@ interface AdStats {
   cpc: number;
   cpa: number;
   ctr: number;
+  utmTotalClicks: number;
+  utmUniqueClicks: number;
 }
 
 interface UtmLink {
   id: number;
+  campaignId: number | null;
   name: string;
   destinationUrl: string;
   utmSource: string;
@@ -61,6 +66,22 @@ interface UtmLink {
   createdAt: string;
   totalClicks: number;
   trackingUrl: string;
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+
+function Tooltip({ text }: { text: string }) {
+  return (
+    <span className="relative group inline-flex items-center ml-1 cursor-help">
+      <span className="text-[9px] font-bold text-gray-400 hover:text-gray-600 w-3.5 h-3.5 rounded-full border border-gray-300 hover:border-gray-400 inline-flex items-center justify-center leading-none transition-colors">
+        ?
+      </span>
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-gray-900 text-white text-xs rounded-xl px-3 py-2.5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 leading-relaxed shadow-lg">
+        {text}
+        <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+      </span>
+    </span>
+  );
 }
 
 // ── Platform badge colours ────────────────────────────────────────────────────
@@ -214,7 +235,9 @@ function CampaignEntries({
                 className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500" />
             </div>
             <div>
-              <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Clicks</label>
+              <label className="block text-[10px] font-medium text-gray-600 mb-0.5 flex items-center">
+                Clicks<Tooltip text="Total ad clicks from your platform's campaign report (e.g. Google Ads → Clicks column)." />
+              </label>
               <input type="number" min="0" value={form.clicks}
                 onChange={(e) => setForm({ ...form, clicks: parseInt(e.target.value) || 0 })}
                 className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500" />
@@ -226,7 +249,9 @@ function CampaignEntries({
                 className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500" />
             </div>
             <div>
-              <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Conversions</label>
+              <label className="block text-[10px] font-medium text-gray-600 mb-0.5 flex items-center">
+                Conversions<Tooltip text="Number of goals completed (purchases, sign-ups, etc.) attributed to your ads. Get this from your platform's conversion report." />
+              </label>
               <input type="number" min="0" value={form.conversions}
                 onChange={(e) => setForm({ ...form, conversions: parseInt(e.target.value) || 0 })}
                 className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500" />
@@ -344,20 +369,51 @@ function AnalyticsTab({ projectId, campaigns }: { projectId: number; campaigns: 
           {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Total Spend",  value: fmtUSD(stats.totalSpendCents) },
-              { label: "Clicks",       value: stats.totalClicks.toLocaleString() },
-              { label: "CPC",          value: fmtUSD(stats.cpc * 100) },
-              { label: "CPA",          value: fmtUSD(stats.cpa * 100) },
-              { label: "CTR",          value: fmtPct(stats.ctr) },
-              { label: "Impressions",  value: stats.totalImpressions.toLocaleString() },
-              { label: "Conversions",  value: stats.totalConversions.toLocaleString() },
-            ].map(({ label, value }) => (
+              { label: "Total Spend",    value: fmtUSD(stats.totalSpendCents), tip: "Sum of all spend entries in this period." },
+              { label: "Manual Clicks",  value: stats.totalClicks.toLocaleString(), tip: "Clicks you entered manually from your ad platform reports. Does not include UTM-tracked clicks." },
+              { label: "CPC",            value: fmtUSD(stats.cpc * 100), tip: "Cost Per Click — total spend ÷ total clicks. Lower is better. Google Search avg: $4.66, Meta avg: $1.72." },
+              { label: "CPA",            value: fmtUSD(stats.cpa * 100), tip: "Cost Per Acquisition — total spend ÷ conversions. This is your most important metric. Compare against your customer LTV." },
+              { label: "CTR",            value: fmtPct(stats.ctr), tip: "Click-Through Rate — clicks ÷ impressions × 100. Google Search benchmark: 6.4%. Meta: 0.9%. Low CTR usually means your ad copy needs improvement." },
+              { label: "Impressions",    value: stats.totalImpressions.toLocaleString(), tip: "How many times your ad was shown. Use this with clicks to calculate CTR." },
+              { label: "Conversions",    value: stats.totalConversions.toLocaleString(), tip: "Sign-ups, purchases, or any goal you track. Enter these from your ad platform's conversion report." },
+            ].map(({ label, value, tip }) => (
               <div key={label} className="bg-gray-50 rounded-xl p-4">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1 flex items-center">
+                  {label}<Tooltip text={tip} />
+                </p>
                 <p className="text-xl font-bold text-gray-900">{value}</p>
               </div>
             ))}
           </div>
+
+          {/* UTM tracked clicks (auto-populated from linked UTM links) */}
+          {(stats.utmTotalClicks > 0 || stats.utmUniqueClicks > 0) && (
+            <div className="bg-violet-50 border border-violet-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">UTM Tracked Clicks</span>
+                <span className="text-[10px] text-violet-500 bg-violet-100 px-2 py-0.5 rounded-full">auto</span>
+                <Tooltip text="Clicks automatically counted when visitors use your tracking links (UTM Links tab). Unique clicks deduplicate by cookie — one visitor per day." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-violet-500 mb-0.5">Total Clicks</p>
+                  <p className="text-2xl font-bold text-violet-900">{stats.utmTotalClicks.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-violet-500 mb-0.5">Unique Clicks</p>
+                  <p className="text-2xl font-bold text-violet-900">{stats.utmUniqueClicks.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {stats.utmTotalClicks === 0 && stats.utmUniqueClicks === 0 && (
+            <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
+              <p className="text-xs text-gray-400">
+                No UTM links linked to this campaign yet. Go to{" "}
+                <strong>UTM Links</strong> and assign a link to see tracked clicks here automatically.
+              </p>
+            </div>
+          )}
 
           {/* Spend chart */}
           <div className="bg-white border border-gray-100 rounded-xl p-4">
@@ -384,15 +440,16 @@ const UTM_PRESETS = [
   { label: "TikTok Ads",   source: "tiktok",   medium: "paid_social" },
 ];
 
-function UtmLinksTab({ projectId }: { projectId: number }) {
-  const [links, setLinks]       = useState<UtmLink[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving]     = useState(false);
+function UtmLinksTab({ projectId, campaigns }: { projectId: number; campaigns: AdCampaign[] }) {
+  const [links, setLinks]         = useState<UtmLink[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [showForm, setShowForm]   = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [assigning, setAssigning] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "", destinationUrl: "", utmSource: "", utmMedium: "",
-    utmCampaign: "", utmContent: "", utmTerm: "",
+    utmCampaign: "", utmContent: "", utmTerm: "", campaignId: "" as string,
   });
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -421,9 +478,10 @@ function UtmLinksTab({ projectId }: { projectId: number }) {
         utmCampaign: form.utmCampaign.trim(),
         utmContent: form.utmContent.trim() || null,
         utmTerm: form.utmTerm.trim() || null,
+        campaignId: form.campaignId ? parseInt(form.campaignId) : null,
       });
       setLinks((prev) => [created, ...prev]);
-      setForm({ name: "", destinationUrl: "", utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "", utmTerm: "" });
+      setForm({ name: "", destinationUrl: "", utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "", utmTerm: "", campaignId: "" });
       setShowForm(false);
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Failed to create link");
@@ -436,6 +494,19 @@ function UtmLinksTab({ projectId }: { projectId: number }) {
     if (!confirm("Delete this UTM link? All click data will be lost.")) return;
     await apiClient.delete(`/api/projects/${projectId}/utm/links/${id}`);
     setLinks((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  const handleAssignCampaign = async (linkId: number, campaignId: number | null) => {
+    setAssigning(linkId);
+    try {
+      const updated = await apiClient.patch<UtmLink>(
+        `/api/projects/${projectId}/utm/links/${linkId}/campaign`,
+        { campaignId }
+      );
+      if (updated) setLinks((prev) => prev.map((l) => l.id === linkId ? updated : l));
+    } finally {
+      setAssigning(null);
+    }
   };
 
   if (loading) return <div className="flex justify-center py-12"><div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -510,6 +581,21 @@ function UtmLinksTab({ projectId }: { projectId: number }) {
             </div>
           </div>
 
+          {campaigns.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Link to campaign <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <select value={form.campaignId} onChange={(e) => setForm({ ...form, campaignId: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                <option value="">— no campaign —</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button type="submit" size="sm" disabled={saving}>{saving ? "Creating…" : "Create UTM Link"}</Button>
           </div>
@@ -534,6 +620,11 @@ function UtmLinksTab({ projectId }: { projectId: number }) {
                       <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full shrink-0">
                         {l.totalClicks} clicks
                       </span>
+                      {l.campaignId && campaigns.find((c) => c.id === l.campaignId) && (
+                        <span className="text-[10px] bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full shrink-0">
+                          {campaigns.find((c) => c.id === l.campaignId)!.name}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 mb-1">
                       <code className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded truncate max-w-xs">
@@ -555,10 +646,26 @@ function UtmLinksTab({ projectId }: { projectId: number }) {
                       </span>
                     </p>
                   </div>
-                  <button onClick={() => handleDelete(l.id)}
-                    className="shrink-0 text-xs text-red-400 hover:text-red-600 transition-colors">
-                    Delete
-                  </button>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    {campaigns.length > 0 && (
+                      <select
+                        value={l.campaignId ?? ""}
+                        onChange={(e) => handleAssignCampaign(l.id, e.target.value ? parseInt(e.target.value) : null)}
+                        disabled={assigning === l.id}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                        title="Assign to campaign"
+                      >
+                        <option value="">no campaign</option>
+                        {campaigns.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
+                    <button onClick={() => handleDelete(l.id)}
+                      className="text-xs text-red-400 hover:text-red-600 transition-colors">
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -574,7 +681,7 @@ function UtmLinksTab({ projectId }: { projectId: number }) {
 export default function PaidAdsBoard({ projectId }: { projectId: number }) {
   const [campaigns, setCampaigns]   = useState<AdCampaign[]>([]);
   const [loading, setLoading]       = useState(true);
-  const [tab, setTab]               = useState<"campaigns" | "analytics" | "utm">("campaigns");
+  const [tab, setTab]               = useState<"campaigns" | "analytics" | "utm" | "simulator">("campaigns");
   const [expanded, setExpanded]     = useState<number | null>(null);
   const [showForm, setShowForm]     = useState(false);
   const [name, setName]             = useState("");
@@ -630,22 +737,31 @@ export default function PaidAdsBoard({ projectId }: { projectId: number }) {
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex items-center justify-between mb-4 gap-4">
+      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
         <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-          {(["campaigns", "analytics", "utm"] as const).map((t) => (
+          {(["campaigns", "analytics", "utm", "simulator"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-3 py-1.5 text-sm rounded-md font-medium capitalize transition-colors ${
                 tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
               }`}>
-              {t === "campaigns" ? "Ad Campaigns" : t === "analytics" ? "Analytics" : "UTM Links"}
+              {t === "campaigns" ? "Ad Campaigns" : t === "analytics" ? "Analytics" : t === "utm" ? "UTM Links" : "Simulator"}
             </button>
           ))}
         </div>
-        {tab === "campaigns" && (
-          <Button size="sm" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Cancel" : "+ New Campaign"}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/dashboard/guides/paid-ads"
+            className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-purple-50 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
+            Ads Guide
+          </Link>
+          {tab === "campaigns" && (
+            <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+              {showForm ? "Cancel" : "+ New Campaign"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* New campaign form */}
@@ -727,7 +843,10 @@ export default function PaidAdsBoard({ projectId }: { projectId: number }) {
       {tab === "analytics" && <AnalyticsTab projectId={projectId} campaigns={campaigns} />}
 
       {/* UTM Links tab */}
-      {tab === "utm" && <UtmLinksTab projectId={projectId} />}
+      {tab === "utm" && <UtmLinksTab projectId={projectId} campaigns={campaigns} />}
+
+      {/* Simulator tab */}
+      {tab === "simulator" && <AdSimulator />}
     </div>
   );
 }

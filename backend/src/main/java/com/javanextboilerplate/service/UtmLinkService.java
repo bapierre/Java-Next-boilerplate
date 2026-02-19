@@ -3,6 +3,7 @@ package com.javanextboilerplate.service;
 import com.javanextboilerplate.dto.request.CreateUtmLinkRequest;
 import com.javanextboilerplate.dto.response.UtmLinkResponse;
 import com.javanextboilerplate.entity.UtmLink;
+import com.javanextboilerplate.repository.PaidAdCampaignRepository;
 import com.javanextboilerplate.repository.SaasProjectRepository;
 import com.javanextboilerplate.repository.UtmClickDailyRepository;
 import com.javanextboilerplate.repository.UtmLinkRepository;
@@ -30,6 +31,7 @@ public class UtmLinkService {
     private final UtmLinkRepository linkRepository;
     private final UtmClickDailyRepository clickDailyRepository;
     private final SaasProjectRepository projectRepository;
+    private final PaidAdCampaignRepository campaignRepository;
     private final UserService userService;
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
@@ -46,8 +48,19 @@ public class UtmLinkService {
     public UtmLinkResponse createLink(Long projectId, CreateUtmLinkRequest req, String supabaseUserId) {
         assertOwnership(projectId, supabaseUserId);
         String slug = generateSlug();
+        // Validate campaign belongs to same project if provided
+        Long campaignId = req.getCampaignId();
+        if (campaignId != null) {
+            var campaign = campaignRepository.findById(campaignId)
+                    .orElseThrow(() -> new RuntimeException("Campaign not found"));
+            if (!campaign.getProjectId().equals(projectId)) {
+                throw new RuntimeException("Campaign not found");
+            }
+        }
+
         UtmLink link = UtmLink.builder()
                 .projectId(projectId)
+                .campaignId(campaignId)
                 .name(req.getName().strip())
                 .destinationUrl(normalizeUrl(req.getDestinationUrl().strip()))
                 .utmSource(req.getUtmSource().strip())
@@ -59,6 +72,26 @@ public class UtmLinkService {
                 .build();
         UtmLink saved = linkRepository.save(link);
         return UtmLinkResponse.from(saved, 0L);
+    }
+
+    @Transactional
+    public UtmLinkResponse assignCampaign(Long linkId, Long projectId, Long campaignId, String supabaseUserId) {
+        assertOwnership(projectId, supabaseUserId);
+        UtmLink link = linkRepository.findById(linkId)
+                .orElseThrow(() -> new RuntimeException("UTM link not found"));
+        if (!link.getProjectId().equals(projectId)) {
+            throw new RuntimeException("UTM link not found");
+        }
+        if (campaignId != null) {
+            var campaign = campaignRepository.findById(campaignId)
+                    .orElseThrow(() -> new RuntimeException("Campaign not found"));
+            if (!campaign.getProjectId().equals(projectId)) {
+                throw new RuntimeException("Campaign not found");
+            }
+        }
+        link.setCampaignId(campaignId);
+        UtmLink saved = linkRepository.save(link);
+        return UtmLinkResponse.from(saved, sumClicks(saved.getId()));
     }
 
     @Transactional

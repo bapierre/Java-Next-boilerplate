@@ -23,4 +23,5 @@ public class CreateUtmLinkRequest {
 
     private String utmContent;
     private String utmTerm;
+    private Long campaignId; // optional — links this UTM link to a paid ad campaign
 }

@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/utm")
@@ -34,6 +35,18 @@ public class UtmLinkController {
             @AuthenticationPrincipal SupabaseUserDetails userDetails
     ) {
         return ResponseEntity.ok(utmLinkService.createLink(projectId, req, userDetails.getUserId()));
+    }
+
+    /** Assign (or unassign) a UTM link to a paid ad campaign. Body: { "campaignId": 5 } or { "campaignId": null } */
+    @PatchMapping("/links/{linkId}/campaign")
+    public ResponseEntity<UtmLinkResponse> assignCampaign(
+            @PathVariable Long projectId,
+            @PathVariable Long linkId,
+            @RequestBody Map<String, Long> body,
+            @AuthenticationPrincipal SupabaseUserDetails userDetails
+    ) {
+        Long campaignId = body.get("campaignId"); // null = unlink
+        return ResponseEntity.ok(utmLinkService.assignCampaign(linkId, projectId, campaignId, userDetails.getUserId()));
     }
 
     @DeleteMapping("/links/{linkId}")

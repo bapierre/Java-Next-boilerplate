@@ -12,5 +12,7 @@ public interface UtmLinkRepository extends JpaRepository<UtmLink, Long> {
 
     List<UtmLink> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 
+    List<UtmLink> findByCampaignId(Long campaignId);
+
     Optional<UtmLink> findBySlug(String slug);
 }

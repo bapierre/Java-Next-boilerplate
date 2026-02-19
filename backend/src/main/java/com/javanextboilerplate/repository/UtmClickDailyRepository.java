@@ -19,6 +19,9 @@ public interface UtmClickDailyRepository extends JpaRepository<UtmClickDaily, Ut
     List<UtmClickDaily> findByUtmLinkIdAndDateBetweenOrderByDateAsc(
             Long utmLinkId, LocalDate from, LocalDate to);
 
+    List<UtmClickDaily> findByUtmLinkIdInAndDateBetweenOrderByDateAsc(
+            List<Long> utmLinkIds, LocalDate from, LocalDate to);
+
     /**
      * Atomic PostgreSQL UPSERT — same pattern as AffiliateClickDailyRepository.
      */

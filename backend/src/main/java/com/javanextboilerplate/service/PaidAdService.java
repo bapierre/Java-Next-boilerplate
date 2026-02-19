@@ -10,6 +10,8 @@ import com.javanextboilerplate.entity.PaidAdEntry;
 import com.javanextboilerplate.repository.PaidAdCampaignRepository;
 import com.javanextboilerplate.repository.PaidAdEntryRepository;
 import com.javanextboilerplate.repository.SaasProjectRepository;
+import com.javanextboilerplate.repository.UtmClickDailyRepository;
+import com.javanextboilerplate.repository.UtmLinkRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,8 @@ public class PaidAdService {
     private final PaidAdCampaignRepository campaignRepository;
     private final PaidAdEntryRepository entryRepository;
     private final SaasProjectRepository projectRepository;
+    private final UtmLinkRepository utmLinkRepository;
+    private final UtmClickDailyRepository utmClickDailyRepository;
     private final UserService userService;
 
     // ── Campaigns ─────────────────────────────────────────────────────────────
@@ -132,6 +136,17 @@ public class PaidAdService {
         double cpa = totalConversions > 0 ? (double) totalSpend / totalConversions : 0.0;
         double ctr = totalImpressions > 0 ? (double) totalClicks / totalImpressions * 100.0 : 0.0;
 
+        // Aggregate UTM click data for all UTM links linked to this campaign
+        List<Long> utmLinkIds = utmLinkRepository.findByCampaignId(campaignId)
+                .stream().map(l -> l.getId()).toList();
+        long utmTotalClicks  = 0;
+        long utmUniqueClicks = 0;
+        if (!utmLinkIds.isEmpty()) {
+            var utmRows = utmClickDailyRepository.findByUtmLinkIdInAndDateBetweenOrderByDateAsc(utmLinkIds, from, to);
+            utmTotalClicks  = utmRows.stream().mapToLong(r -> r.getTotalClicks()).sum();
+            utmUniqueClicks = utmRows.stream().mapToLong(r -> r.getUniqueClicks()).sum();
+        }
+
         return PaidAdStatsResponse.builder()
                 .timeline(timeline)
                 .totalSpendCents(totalSpend)
@@ -141,6 +156,8 @@ public class PaidAdService {
                 .cpc(cpc)
                 .cpa(cpa)
                 .ctr(ctr)
+                .utmTotalClicks(utmTotalClicks)
+                .utmUniqueClicks(utmUniqueClicks)
                 .build();
     }
 
