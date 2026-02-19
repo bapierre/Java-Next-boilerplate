@@ -87,7 +87,7 @@ public class ChannelSyncService {
     // NOTE: No @Transactional here by design — this method makes external HTTP calls (up to 15s each).
     // Wrapping in a transaction would hold a DB connection for the entire duration, exhausting the pool.
     // Each repository.save() call below uses its own short-lived transaction.
-    public void syncChannel(Channel channel) {
+    public void syncChannel(Channel channel) throws Exception {
         // Refresh token if expired
         if (channel.isTokenExpired()) {
             boolean refreshed = refreshToken(channel);
@@ -249,23 +249,26 @@ public class ChannelSyncService {
 
     // ─── Token Refresh ───
 
-    private boolean refreshToken(Channel channel) {
-        try {
-            return switch (channel.getPlatform()) {
-                case TWITTER -> refreshTwitterToken(channel);
-                case YOUTUBE -> refreshYouTubeToken(channel);
-                case TIKTOK -> refreshTikTokToken(channel);
-                case INSTAGRAM, FACEBOOK -> false; // No refresh token — mark inactive when expired
-            };
-        } catch (Exception e) {
-            log.warn("Token refresh failed for {} channel {}: {}",
-                    channel.getPlatform().getValue(), channel.getId(), e.getMessage());
-            return false;
-        }
+    private boolean refreshToken(Channel channel) throws Exception {
+        // Do NOT catch exceptions here.
+        // Transient errors (network timeout, rate-limit, unexpected HTTP response) should
+        // propagate to syncAllChannels' outer try-catch, which logs a warning and moves on
+        // WITHOUT marking the channel inactive.  Only return false for known-permanent
+        // failures (no refresh token, or an OAuth error like invalid_grant), which tells
+        // syncChannel to mark the channel inactive.
+        return switch (channel.getPlatform()) {
+            case TWITTER -> refreshTwitterToken(channel);
+            case YOUTUBE -> refreshYouTubeToken(channel);
+            case TIKTOK  -> refreshTikTokToken(channel);
+            case INSTAGRAM, FACEBOOK -> false; // No refresh token flow — must reconnect
+        };
     }
 
     private boolean refreshTwitterToken(Channel channel) throws Exception {
-        if (channel.getRefreshToken() == null || channel.getRefreshToken().isBlank()) return false;
+        if (channel.getRefreshToken() == null || channel.getRefreshToken().isBlank()) {
+            log.warn("Twitter channel {} has no refresh token — marking inactive", channel.getId());
+            return false; // Permanent — user must reconnect
+        }
 
         String credentials = Base64.getEncoder().encodeToString(
                 (twitterClientId + ":" + twitterClientSecret).getBytes(StandardCharsets.UTF_8));
@@ -286,12 +289,19 @@ public class ChannelSyncService {
 
         String newAccessToken = json.path("access_token").asText("");
         if (newAccessToken.isEmpty()) {
-            log.warn("Twitter token refresh failed for channel {} [HTTP {}]: {}",
-                    channel.getId(), response.statusCode(), response.body());
-            return false;
+            String error = json.path("error").asText("");
+            // invalid_grant / invalid_client = refresh token revoked or expired — permanent
+            if ("invalid_grant".equals(error) || "invalid_client".equals(error)) {
+                log.warn("Twitter token refresh permanent failure for channel {} ({}): marking inactive",
+                        channel.getId(), error);
+                return false;
+            }
+            // Any other failure (rate-limit, server error, etc.) — throw so the caller treats it as transient
+            throw new RuntimeException("Twitter token refresh failed [HTTP " + response.statusCode() + "]: " + response.body());
         }
 
         channel.setAccessToken(newAccessToken);
+        // Twitter rotates refresh tokens — always save the new one if provided
         String newRefreshToken = json.path("refresh_token").asText("");
         if (!newRefreshToken.isEmpty()) {
             channel.setRefreshToken(newRefreshToken);
@@ -305,7 +315,10 @@ public class ChannelSyncService {
     }
 
     private boolean refreshYouTubeToken(Channel channel) throws Exception {
-        if (channel.getRefreshToken() == null || channel.getRefreshToken().isBlank()) return false;
+        if (channel.getRefreshToken() == null || channel.getRefreshToken().isBlank()) {
+            log.warn("YouTube channel {} has no refresh token — marking inactive", channel.getId());
+            return false;
+        }
 
         String body = "grant_type=refresh_token"
                 + "&refresh_token=" + encode(channel.getRefreshToken())
@@ -324,9 +337,13 @@ public class ChannelSyncService {
 
         String newAccessToken = json.path("access_token").asText("");
         if (newAccessToken.isEmpty()) {
-            log.warn("YouTube token refresh failed for channel {} [HTTP {}]: {}",
-                    channel.getId(), response.statusCode(), response.body());
-            return false;
+            String error = json.path("error").asText("");
+            if ("invalid_grant".equals(error) || "invalid_client".equals(error)) {
+                log.warn("YouTube token refresh permanent failure for channel {} ({}): marking inactive",
+                        channel.getId(), error);
+                return false;
+            }
+            throw new RuntimeException("YouTube token refresh failed [HTTP " + response.statusCode() + "]: " + response.body());
         }
 
         channel.setAccessToken(newAccessToken);
@@ -339,7 +356,10 @@ public class ChannelSyncService {
     }
 
     private boolean refreshTikTokToken(Channel channel) throws Exception {
-        if (channel.getRefreshToken() == null || channel.getRefreshToken().isBlank()) return false;
+        if (channel.getRefreshToken() == null || channel.getRefreshToken().isBlank()) {
+            log.warn("TikTok channel {} has no refresh token — marking inactive", channel.getId());
+            return false;
+        }
 
         String body = "client_key=" + encode(tiktokClientId)
                 + "&client_secret=" + encode(tiktokClientSecret)
@@ -358,9 +378,14 @@ public class ChannelSyncService {
 
         String newAccessToken = json.path("access_token").asText("");
         if (newAccessToken.isEmpty()) {
-            log.warn("TikTok token refresh failed for channel {} [HTTP {}]: {}",
-                    channel.getId(), response.statusCode(), response.body());
-            return false;
+            String errorCode = json.path("error_code").asText(json.path("error").asText(""));
+            // TikTok uses numeric error codes; 10010 = invalid refresh token (permanent)
+            if (!errorCode.isEmpty() && (errorCode.equals("10010") || errorCode.equals("invalid_grant"))) {
+                log.warn("TikTok token refresh permanent failure for channel {} (code={}): marking inactive",
+                        channel.getId(), errorCode);
+                return false;
+            }
+            throw new RuntimeException("TikTok token refresh failed [HTTP " + response.statusCode() + "]: " + response.body());
         }
 
         channel.setAccessToken(newAccessToken);

@@ -140,9 +140,13 @@ export function ConnectedSources({
                   </span>
                 )}
                 {!ch.isActive && !ch.linked && (
-                  <span className="text-gray-400 font-normal ml-1 text-xs">
-                    (pending)
-                  </span>
+                  <button
+                    onClick={onOpenModal}
+                    className="text-amber-500 font-normal ml-1 text-xs underline hover:text-amber-600"
+                    title="Token expired — click to reconnect this account"
+                  >
+                    reconnect
+                  </button>
                 )}
               </p>
               {ch.followerCount != null ? (
@@ -342,9 +346,9 @@ export function ConnectPlatformModal({
                     {channels.map((ch) => (
                       <div
                         key={ch.id}
-                        className="flex items-center justify-between"
+                        className="flex items-center justify-between gap-2"
                       >
-                        <span className="text-sm text-gray-600 truncate">
+                        <span className="text-sm text-gray-600 truncate flex-1 min-w-0">
                           {ch.channelName}
                           {ch.linked && (
                             <span className="text-blue-500 ml-1 text-xs">
@@ -352,24 +356,37 @@ export function ConnectPlatformModal({
                             </span>
                           )}
                           {!ch.isActive && !ch.linked && (
-                            <span className="text-gray-400 ml-1">
-                              (pending)
+                            <span className="text-red-400 ml-1 text-xs">
+                              (token expired)
                             </span>
                           )}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDisconnect(ch.id, !!ch.linked)}
-                          disabled={disconnectingId === ch.id}
-                          className="text-gray-400 hover:text-red-600 h-7 px-2 text-xs"
-                        >
-                          {disconnectingId === ch.id
-                            ? "..."
-                            : ch.linked
-                              ? "Unlink"
-                              : "Disconnect"}
-                        </Button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!ch.isActive && !ch.linked && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleConnect(platform.key)}
+                              disabled={connectingPlatform === platform.key}
+                              className="h-7 px-2 text-xs text-amber-600 border-amber-300 hover:bg-amber-50"
+                            >
+                              {connectingPlatform === platform.key ? "..." : "Reconnect"}
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDisconnect(ch.id, !!ch.linked)}
+                            disabled={disconnectingId === ch.id}
+                            className="text-gray-400 hover:text-red-600 h-7 px-2 text-xs"
+                          >
+                            {disconnectingId === ch.id
+                              ? "..."
+                              : ch.linked
+                                ? "Unlink"
+                                : "Disconnect"}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

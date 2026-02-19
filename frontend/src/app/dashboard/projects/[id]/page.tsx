@@ -14,6 +14,7 @@ import PostPerformanceChart from "@/components/dashboard/PostPerformanceChart";
 import ColdOutreachBoard from "@/components/dashboard/ColdOutreachBoard";
 import SeoBoard from "@/components/dashboard/SeoBoard";
 import AffiliateBoard from "@/components/dashboard/AffiliateBoard";
+import PaidAdsBoard from "@/components/dashboard/PaidAdsBoard";
 import {
   Sparkline,
   PlatformBar,
@@ -24,7 +25,7 @@ import type { ProjectResponse } from "@/components/dashboard/ProjectList";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Segment = "social" | "outreach" | "seo" | "affiliate" | null;
+type Segment = "social" | "outreach" | "seo" | "affiliate" | "paidads" | null;
 
 interface SeoAuditSummary {
   score: number;
@@ -145,12 +146,14 @@ function SegmentSelector({
   outreaches,
   seoScore,
   affiliateClicks,
+  adSpend,
 }: {
   onSelect: (segment: Segment) => void;
   stats: ProjectStatsData | null;
   outreaches: OutreachEntry[];
   seoScore: number | null;
   affiliateClicks: number | null;
+  adSpend: number | null;
 }) {
   const now = new Date();
   const thisMonth = outreaches.filter((o) => {
@@ -253,8 +256,32 @@ function SegmentSelector({
         <OutreachDonut ongoing={ongoing} success={success} fail={fail} />
       </button>
 
-      {/* Paid Ads — disabled */}
-      <ComingSoonCard title="Paid Ads" description="Track ad spend, ROAS, and campaign performance." />
+      {/* Paid Ads — active */}
+      <button
+        onClick={() => onSelect("paidads")}
+        className="text-left p-5 bg-white border border-gray-200 rounded-2xl hover:border-purple-400 hover:shadow-sm transition-all group cursor-pointer"
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Segment</p>
+            <h3 className="text-base font-bold text-gray-900 group-hover:text-purple-700 transition-colors">Paid Ads</h3>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+            className="w-5 h-5 text-gray-300 group-hover:text-purple-400 transition-colors mt-0.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </div>
+        {adSpend !== null && adSpend > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-gray-900">
+              ${(adSpend / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <p className="text-xs text-gray-400">total ad spend</p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">Track ad spend, CPC, CPA and UTM link performance</p>
+        )}
+      </button>
 
       {/* SEO — active */}
       <button
@@ -338,6 +365,7 @@ export default function ProjectDetailPage() {
   const [outreaches, setOutreaches]         = useState<OutreachEntry[]>([]);
   const [seoScore, setSeoScore]             = useState<number | null>(null);
   const [affiliateClicks, setAffiliateClicks] = useState<number | null>(null);
+  const [adSpend, setAdSpend]               = useState<number | null>(null);
 
   const fetchProject = async () => {
     try {
@@ -366,6 +394,9 @@ export default function ProjectDetailPage() {
           setAffiliateClicks(total);
         }
       }).catch(() => {});
+    // Prefetch paid ads total spend for the segment card
+    apiClient.get<{ totalSpendCents: number }>(`/api/projects/${projectId}/paid-ads/total-spend`)
+      .then((d) => { if (d) setAdSpend(d.totalSpendCents); }).catch(() => {});
   }, [projectId]);
 
   // Personal brands only have social media — go straight to that view
@@ -521,6 +552,7 @@ export default function ProjectDetailPage() {
             outreaches={outreaches}
             seoScore={seoScore}
             affiliateClicks={affiliateClicks}
+            adSpend={adSpend}
           />
         )}
 
@@ -580,6 +612,10 @@ export default function ProjectDetailPage() {
 
             {segment === "affiliate" && (
               <AffiliateBoard projectId={project.id} />
+            )}
+
+            {segment === "paidads" && (
+              <PaidAdsBoard projectId={project.id} />
             )}
           </div>
         )}

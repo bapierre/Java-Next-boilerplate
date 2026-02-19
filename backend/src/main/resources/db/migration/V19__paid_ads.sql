@@ -1,0 +1,53 @@
+-- Ad Spend Campaigns
+CREATE TABLE paid_ad_campaigns (
+    id         BIGSERIAL PRIMARY KEY,
+    project_id BIGINT       NOT NULL REFERENCES saas_projects(id) ON DELETE CASCADE,
+    name       VARCHAR(200) NOT NULL,
+    platform   VARCHAR(50)  NOT NULL,
+    created_at TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_paid_ad_campaigns_project ON paid_ad_campaigns(project_id);
+
+-- Daily entries — one row per campaign per date (UNIQUE enforces upsert semantics)
+CREATE TABLE paid_ad_entries (
+    id          BIGSERIAL PRIMARY KEY,
+    campaign_id BIGINT NOT NULL REFERENCES paid_ad_campaigns(id) ON DELETE CASCADE,
+    date        DATE   NOT NULL,
+    spend_cents INT    NOT NULL DEFAULT 0,
+    clicks      INT    NOT NULL DEFAULT 0,
+    impressions INT    NOT NULL DEFAULT 0,
+    conversions INT    NOT NULL DEFAULT 0,
+    notes       TEXT,
+    UNIQUE (campaign_id, date)
+);
+CREATE INDEX idx_paid_ad_entries_campaign ON paid_ad_entries(campaign_id);
+
+-- UTM Links (tracked via /t/{slug})
+CREATE TABLE utm_links (
+    id              BIGSERIAL    PRIMARY KEY,
+    project_id      BIGINT       NOT NULL REFERENCES saas_projects(id) ON DELETE CASCADE,
+    name            VARCHAR(200) NOT NULL,
+    destination_url VARCHAR(2000) NOT NULL,
+    utm_source      VARCHAR(200) NOT NULL,
+    utm_medium      VARCHAR(200) NOT NULL,
+    utm_campaign    VARCHAR(200) NOT NULL,
+    utm_content     VARCHAR(200),
+    utm_term        VARCHAR(200),
+    slug            VARCHAR(50)  NOT NULL UNIQUE,
+    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_utm_links_project ON utm_links(project_id);
+CREATE INDEX idx_utm_links_slug    ON utm_links(slug);
+
+-- UTM click aggregates (mirrors affiliate_click_daily structure)
+CREATE TABLE utm_click_daily (
+    utm_link_id   BIGINT NOT NULL REFERENCES utm_links(id) ON DELETE CASCADE,
+    date          DATE   NOT NULL,
+    total_clicks  INT    NOT NULL DEFAULT 0,
+    unique_clicks INT    NOT NULL DEFAULT 0,
+    by_referer    JSONB  NOT NULL DEFAULT '{}',
+    by_device     JSONB  NOT NULL DEFAULT '{}',
+    PRIMARY KEY (utm_link_id, date)
+);
+CREATE INDEX idx_utm_click_daily_link ON utm_click_daily(utm_link_id);

@@ -3,10 +3,12 @@ package com.javanextboilerplate.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.javanextboilerplate.entity.Channel;
+import com.javanextboilerplate.entity.ChannelStats;
 import com.javanextboilerplate.entity.Platform;
 import com.javanextboilerplate.entity.SaasProject;
 import com.javanextboilerplate.entity.User;
 import com.javanextboilerplate.repository.ChannelRepository;
+import com.javanextboilerplate.repository.ChannelStatsRepository;
 import com.javanextboilerplate.repository.SaasProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +42,7 @@ public class ChannelOAuthService {
 
     private final SaasProjectRepository projectRepository;
     private final ChannelRepository channelRepository;
+    private final ChannelStatsRepository channelStatsRepository;
     private final ChannelSyncService channelSyncService;
     private final UserService userService;
     private final ObjectMapper objectMapper;
@@ -211,6 +214,16 @@ public class ChannelOAuthService {
         log.info("OAuth completed for {} — connected '{}' on project {}",
                 platform.getValue(), userInfo.displayName, projectId);
 
+        // Save an immediate follower-count snapshot inside this transaction.
+        // This guarantees a data point even if the afterCommit sync below fails.
+        if (userInfo.followerCount() != null && userInfo.followerCount() > 0) {
+            channelStatsRepository.save(ChannelStats.builder()
+                    .channel(savedChannel)
+                    .recordedAt(LocalDateTime.now())
+                    .followersCount(userInfo.followerCount())
+                    .build());
+        }
+
         // Trigger initial sync AFTER transaction commits so a sync failure can't roll back the channel save
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -303,6 +316,15 @@ public class ChannelOAuthService {
 
         if (accessToken.isEmpty()) {
             throw new RuntimeException("Twitter token exchange failed: " + response.body());
+        }
+
+        if (refreshToken.isEmpty()) {
+            log.warn("Twitter OAuth did not return a refresh_token for the new connection — " +
+                    "ensure 'offline.access' scope is granted and the app has Offline Access enabled " +
+                    "in the Twitter developer portal. Without a refresh token, the access token cannot " +
+                    "be automatically renewed when it expires (~2 hours).");
+        } else {
+            log.info("Twitter OAuth returned a refresh_token — offline access is working correctly");
         }
 
         return new TokenResponse(accessToken, refreshToken, LocalDateTime.now().plusSeconds(expiresIn), null);
@@ -509,7 +531,7 @@ public class ChannelOAuthService {
 
     private PlatformUserInfo fetchInstagramUser(String accessToken) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://graph.instagram.com/me?fields=id,username&access_token=" + encode(accessToken)))
+                .uri(URI.create("https://graph.instagram.com/me?fields=id,username,followers_count&access_token=" + encode(accessToken)))
                 .GET()
                 .timeout(Duration.ofSeconds(15))
                 .build();
@@ -519,8 +541,9 @@ public class ChannelOAuthService {
 
         String username = json.path("username").asText("Instagram User");
         String id = json.path("id").asText("unknown");
+        long followers = json.path("followers_count").asLong(0);
 
-        return new PlatformUserInfo("@" + username, id, "https://www.instagram.com/" + username, null);
+        return new PlatformUserInfo("@" + username, id, "https://www.instagram.com/" + username, followers > 0 ? followers : null);
     }
 
     private PlatformUserInfo fetchFacebookUser(String accessToken) throws Exception {
