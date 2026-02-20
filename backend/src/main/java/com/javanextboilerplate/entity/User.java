@@ -35,6 +35,10 @@ public class User {
     @Column(name = "stripe_customer_id", unique = true)
     private String stripeCustomerId;
 
+    @Column(name = "is_admin", nullable = false)
+    @Builder.Default
+    private boolean isAdmin = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -37,9 +37,10 @@ type FormType = "PRODUCT" | "PERSONAL_BRAND" | null;
 interface ProjectListProps {
   email: string;
   onSignOut: () => void;
+  isAdmin?: boolean;
 }
 
-export default function ProjectList({ email, onSignOut }: ProjectListProps) {
+export default function ProjectList({ email, onSignOut, isAdmin = false }: ProjectListProps) {
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,9 +136,19 @@ export default function ProjectList({ email, onSignOut }: ProjectListProps) {
                 />
               </div>
             </a>
-            <Button variant="outline" size="sm" onClick={onSignOut}>
-              Sign out
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <a
+                  href="/dashboard/admin"
+                  className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium hover:bg-purple-200 transition-colors"
+                >
+                  Admin
+                </a>
+              )}
+              <Button variant="outline" size="sm" onClick={onSignOut}>
+                Sign out
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
@@ -145,9 +156,19 @@ export default function ProjectList({ email, onSignOut }: ProjectListProps) {
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-500 text-sm">{email}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={onSignOut}>
-              Sign out
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <a
+                  href="/dashboard/admin"
+                  className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium hover:bg-purple-200 transition-colors"
+                >
+                  Admin
+                </a>
+              )}
+              <Button variant="outline" size="sm" onClick={onSignOut}>
+                Sign out
+              </Button>
+            </div>
           </div>
         )}
       </header>

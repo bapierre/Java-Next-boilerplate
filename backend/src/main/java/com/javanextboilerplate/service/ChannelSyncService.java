@@ -290,8 +290,8 @@ public class ChannelSyncService {
         String newAccessToken = json.path("access_token").asText("");
         if (newAccessToken.isEmpty()) {
             String error = json.path("error").asText("");
-            // invalid_grant / invalid_client = refresh token revoked or expired — permanent
-            if ("invalid_grant".equals(error) || "invalid_client".equals(error)) {
+            // invalid_grant / invalid_client / invalid_request = token revoked, expired, or corrupt — permanent
+            if ("invalid_grant".equals(error) || "invalid_client".equals(error) || "invalid_request".equals(error)) {
                 log.warn("Twitter token refresh permanent failure for channel {} ({}): marking inactive",
                         channel.getId(), error);
                 return false;

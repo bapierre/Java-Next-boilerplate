@@ -57,6 +57,18 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     List<Channel> findByIsActiveTrue();
 
     /**
+     * Find all active channels for a specific user (across all their projects)
+     */
+    @Query("SELECT c FROM Channel c WHERE c.project.userId = :userId AND c.isActive = true")
+    List<Channel> findActiveChannelsByUserId(@Param("userId") Long userId);
+
+    /**
+     * Count all channels for a specific user (across all their projects)
+     */
+    @Query("SELECT COUNT(c) FROM Channel c WHERE c.project.userId = :userId")
+    long countChannelsByUserId(@Param("userId") Long userId);
+
+    /**
      * Get follower counts grouped by platform for a project
      */
     @Query("SELECT c.platform, c.followerCount " +
